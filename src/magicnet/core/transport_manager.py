@@ -145,7 +145,7 @@ class TransportManager(MessengerNode, abc.ABC):
             self.transports[dest].deliver(message_group)
 
     def open_servers(self, **kwargs):
-        for role, args in kwargs.items():
+        for role in kwargs:
             if role not in self.transports:
                 raise ValueError(f"Unknown target role: {role}")
 
@@ -154,7 +154,7 @@ class TransportManager(MessengerNode, abc.ABC):
             transport.open_server(*args)
 
     def make_connections(self, **kwargs):
-        for role, args in kwargs.items():
+        for role in kwargs:
             if role not in self.transports:
                 raise ValueError(f"Unknown target role: {role}")
 
