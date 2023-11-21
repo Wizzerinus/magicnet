@@ -5,8 +5,6 @@ from collections.abc import Callable
 from typing import Any, cast
 
 try:
-    # TODO: reimplement this middleware in a less stupid way
-    #  because it has issues when bytestrings are involved
     from pydantic import BaseModel, ValidationError
 except ImportError:
     ValidationError = BaseModel = None
@@ -18,17 +16,17 @@ from magicnet.protocol.processor_base import MessageProcessor
 from magicnet.util.messenger import StandardEvents
 
 
-def create_validator(input_type: type) -> Callable[[Any], bool]:
+def create_validator(input_type: type) -> Callable[[Any], tuple[bool, Any]]:
     class C(BaseModel):
         args: input_type
 
     def test(value):
         try:
-            C(args=value)
+            c = C(args=value)
         except ValidationError:
-            return False
+            return False, None
         else:
-            return True
+            return True, c.args
 
     return test
 
@@ -61,13 +59,15 @@ class MessageValidatorMiddleware(TransportMiddleware):
     def validate_message(self, message: NetMessage, *, do_warn: bool = True):
         if message.message_type not in self.validators:
             return message
-        if not self.validators[message.message_type](message.parameters):
+        valid, params = self.validators[message.message_type](message.parameters)
+        if not valid:
             if do_warn:
                 self.emit(
                     StandardEvents.WARNING,
                     f"Invalid parameters received: {message}! Ignoring.",
                 )
             return None
+        message.parameters = params
         return message
 
     def validate_message_send(self, message: NetMessage):
