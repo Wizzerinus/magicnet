@@ -10,6 +10,8 @@ Source code: <https://github.com/wizzerinus/magicnet>
 
 MagicNet is a modern library for building real-time web applications.
 
+Its key features are:
+
 * **Client simplicity**: write simple and intuitive Python code, typehint your code if you want,
   write zero boilerplate, and get efficient network interaction in any scenario.
 * **Client flexibility**:
@@ -115,7 +117,7 @@ Full-fledged examples can be found in `examples` directory.
 The defining power of MagicNet is being able to work with different networking stacks.
 Out of the box are included an AsyncIO-TCP-based stack, and a native single-process stack.
 An example of a custom networking stack is included in the example `b_client_panda3d`:
-only the networking adapter (a very small fracture of the application code in real applications)
+only the networking adapter (a very small fraction of the application code in real applications)
 had to be changed to migrate to a completely different asynchronous stack
 with no AsyncIO knowledge whatsoever.
 
