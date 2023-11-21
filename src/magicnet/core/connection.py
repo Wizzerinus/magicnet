@@ -27,6 +27,8 @@ class ConnectionHandle:
     destroyed: bool = False
     context: dict = dataclasses.field(default_factory=dict)
     """Data used by the application to store data persistent for this connection"""
+    shared_parameters: dict[str, Any] = dataclasses.field(default_factory=dict)
+    """Same as context, but will be more or less the same on both sides"""
 
     def activate(self):
         if self.activated:
@@ -48,3 +50,10 @@ class ConnectionHandle:
         self.destroyed = True
         self.transport.emit(MNEvents.HANDLE_DESTROYED, self)
         self.transport.destroy_handle(self)
+
+    def set_shared_parameter(self, name: str, value):
+        self.shared_parameters[name] = value
+        msg = NetMessage(
+            StandardMessageTypes.SHARED_PARAMETER, (name, value), f_destination=self
+        )
+        self.transport.manager.send_message(msg)

@@ -33,7 +33,19 @@ class StandardMessageTypes(IntEnum):
     """
     Sent when the other end of the connection is shut down
     (i.e. client disconnects or server is rebooted).
+
     Parameters: []
+    """
+
+    SHARED_PARAMETER = auto()
+    """
+    One side of the connection asks the other to set a shared parameter
+    to some value. Unlike connection context, shared parameters are
+    the same on both sides of the connection. Shared parameters can have
+    any type (that can be encoded in json/msgpack), but the middleware
+    may intercept a request if the type is wrong.
+
+    Parameters: [string name, object value]
     """
 
 
@@ -48,4 +60,4 @@ class StandardDCReasons(IntEnum):
     """The client sent a disallowed message before handshake was established"""
 
 
-mn_proto_version = 1
+mn_proto_version = 2
