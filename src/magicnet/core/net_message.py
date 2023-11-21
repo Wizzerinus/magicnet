@@ -1,8 +1,10 @@
 __all__ = ["NetMessage", "standard_range"]
 
 import dataclasses
+from typing import TYPE_CHECKING
 
-from magicnet.core.connection import ConnectionHandle
+if TYPE_CHECKING:
+    from magicnet.core.connection import ConnectionHandle
 
 
 @dataclasses.dataclass
@@ -19,16 +21,24 @@ class NetMessage:
     List of parameters of the message. Each message type
     has its own signature defined in the class.
     """
-    sent_from: ConnectionHandle = None
+    sent_from: "ConnectionHandle" = None
     """
     Handle of the sender. Usually this should not be edited.
     """
-    destination: ConnectionHandle = None
+    destination: "ConnectionHandle" = None
     """
     Existence of this field is a bit misleading, it usually only matters
     for the callback set on HandleFilter (or TransportManager).
     The default HandleFilter will be only sending messages
     to the destination if one is set, though.
+    """
+    f_destination: "ConnectionHandle" = None
+    """
+    This is similar to destination, except it cannot be overwritten
+    by the HandleFilter. If this is set the message is always
+    going to this handle and nothing else, regardless of what
+    the filter says (this is for internal messaging purposes).
+    This shouldn't be used except in the internal code of the library.
     """
 
     @property

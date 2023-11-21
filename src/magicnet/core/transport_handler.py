@@ -131,8 +131,11 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def deliver(self, messages: Iterable[NetMessage]) -> None:
         destinations = defaultdict(list)
         for message in messages:
-            for handle_id in self.handle_filter.resolve_destination(message):
-                destinations[handle_id].append(message)
+            if message.f_destination is not None:
+                destinations[message.f_destination.uuid].append(message)
+            else:
+                for handle_id in self.handle_filter.resolve_destination(message):
+                    destinations[handle_id].append(message)
 
         for dest, message_group in destinations.items():
             if dest not in self.connections:
