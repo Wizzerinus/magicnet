@@ -12,7 +12,7 @@ from magicnet.core.net_message import NetMessage
 
 client = AsyncIONetworkManager.create_root(
     transport_type=EverywhereTransportManager,
-    transport_params=("client", b_common.ports, b_common.transport),
+    transport_params=("client", b_common.transport),
     extras=b_common.extra_message_types,
     shutdown_on_disconnect=True,
 )
@@ -52,4 +52,4 @@ async def read_loop():
 
 
 client.spawn_task(read_loop())
-client.open_connection("127.0.0.1", 5000)
+client.open_connection(server=("127.0.0.1", 5000))

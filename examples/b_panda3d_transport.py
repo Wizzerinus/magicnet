@@ -39,16 +39,16 @@ class Panda3DTransport(TransportHandler):
         self.conn_writer.send(pydg, connection.connection_data)  # type: ignore
 
     def connect(self, host: str, port: int) -> None:
-        conn = self.conn_mgr.open_TCP_client_connection(host, port, 2000)
+        conn = self.conn_mgr.openTCPClientConnection(host, port, 2000)
         if conn:
             self.add_connection(conn)
             TaskManagerGlobal.taskMgr.add(self.poll_reader, "p3d-poll-read", -40)
         else:
             raise RuntimeError(f"Unable to connect to the server at {host}:{port}")
 
-    def open_server(self, port: int) -> None:
+    def open_server(self, host: str, port: int) -> None:
         self.conn_listener = p3dcore.QueuedConnectionListener(self.conn_mgr, 0)
-        self.tcp_rendezvous = self.conn_mgr.openTCPServerRendezvous(port, 1000)
+        self.tcp_rendezvous = self.conn_mgr.openTCPServerRendezvous(host, port, 1000)
         self.conn_listener.addConnection(self.tcp_rendezvous)
         TaskManagerGlobal.taskMgr.add(self.poll_rendezvous, "p3d-poll-tcp", -39)
         TaskManagerGlobal.taskMgr.add(self.poll_reader, "p3d-poll-read", -40)

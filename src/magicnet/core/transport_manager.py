@@ -80,30 +80,22 @@ class TransportManager(MessengerNode, abc.ABC):
     """
 
     role: str
-    port_to_role: dict[int, str]
     transports: dict[str, TransportHandler]
-    role_to_port: dict[str, int] = None
     queue_active: bool = False
     __delivery_queue: list[NetMessage] = dataclasses.field(default_factory=list)
-
-    @property
-    def own_port(self):
-        return self.role_to_port[self.role]
 
     @classmethod
     def from_map(
         cls: T,
         parent: MessengerNode,
         role: str,
-        port_to_role: dict[int, str],
         transport_map: TransportAnyType,
     ) -> T:
-        obj = cls(role=role, port_to_role=port_to_role, transports={}, _parent=parent)
+        obj = cls(role=role, transports={}, _parent=parent)
         obj.transports = extract_transport_method(obj, role, transport_map)
         return obj
 
     def __post_init__(self):
-        self.role_to_port = {role: port for port, role in self.port_to_role.items()}
         for transport in self.transports.values():
             transport.parent = self
 
@@ -152,17 +144,23 @@ class TransportManager(MessengerNode, abc.ABC):
                 self.emit(StandardEvents.ERROR, f"Unknown network role: {dest}!")
             self.transports[dest].deliver(message_group)
 
-    def open_servers(self):
-        for role, transport in self.transports.items():
-            transport.open_server(self.role_to_port[role])
+    def open_servers(self, **kwargs):
+        for role, args in kwargs.items():
+            if role not in self.transports:
+                raise ValueError(f"Unknown target role: {role}")
 
-    def make_connections(self, *address):
-        if len(self.transports) != 1:
-            raise NotImplementedError(
-                "make_connections currently only works with one server!"
-            )
-        for transport in self.transports.values():
-            transport.connect(*address)
+        for role, args in kwargs.items():
+            transport = self.transports[role]
+            transport.open_server(*args)
+
+    def make_connections(self, **kwargs):
+        for role, args in kwargs.items():
+            if role not in self.transports:
+                raise ValueError(f"Unknown target role: {role}")
+
+        for role, args in kwargs.items():
+            transport = self.transports[role]
+            transport.connect(*args)
 
     def shutdown_connections(self):
         for transport in self.transports.values():

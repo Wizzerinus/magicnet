@@ -22,18 +22,13 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
     NetworkManager is the base class for MagicNetworking's operation.
     One has to be created to use this library. An example use::
 
-        ports = {5000: "server", 5001: "client"}
         middlewares = [MessageValidatorMiddleware]
         encoder = MsgpackEncoder()
         params = TransportParameters(encoder, AsyncIOSocketTransport, None, middlewares)
-        transport = {
-            "client": {
-                "server":
-            }
-        }
+        transport = {"client": {"server": params}}
         server = AsyncIONetworkManager.create_root(
             transport_type=EverywhereTransportManager,
-            transport_params=("server", ports, transport),
+            transport_params=("server", transport),
             motd="An example server host",
         )
     """
@@ -89,15 +84,42 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
             for msg in messages:
                 self.dg_processor.process_message(msg)
 
-    def open_server(self):
+    def open_server(self, **kwargs):
+        """
+        Starts one or more servers.
+        Note that kwargs should map the foreign role to the parameters
+        provided to that role. So if you run this on a node with
+        the role = 'server', and the other node in your network
+        is called 'client', you should map 'client' to the parameters.
+
+        This function should be non-blocking, but other types of NetworkManagers
+        may make it blocking (see: AsyncIONetworkManager).
+        """
+
+        if not kwargs:
+            raise TypeError("open_server requires at least one set of parameters!")
         self.emit(MNEvents.BEFORE_LAUNCH)
         self.emit(StandardEvents.INFO, "Opening network servers!")
-        self.transport.open_servers()
+        self.transport.open_servers(**kwargs)
 
-    def open_connection(self, *address):
+    def open_connection(self, **kwargs):
+        """
+        Connects to one or more servers.
+        Note that kwargs should map the foreign role to the parameters
+        provided to that role. So if you run this on a node with
+        the role = 'client', and the other node in your network
+        is called 'server', you should map 'server' to the parameters.
+
+        This function should be non-blocking, but other types of NetworkManagers
+        may make it blocking (see: AsyncIONetworkManager).
+        """
+
+        if not kwargs:
+            raise TypeError("open_connection requires at least one set of parameters!")
+
         self.emit(MNEvents.BEFORE_LAUNCH)
         self.emit(StandardEvents.INFO, "Connecting to a server!")
-        self.transport.make_connections(*address)
+        self.transport.make_connections(**kwargs)
 
     def shutdown(self):
         self.emit(StandardEvents.INFO, "Shutting down!")

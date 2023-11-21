@@ -32,12 +32,12 @@ class AsyncIOSocketTransport(TransportHandler["AsyncIONetworkManager"]):
         reader, writer = await asyncio.open_connection(host, port)
         await self.srv_callback(reader, writer, from_client=True)
 
-    def open_server(self, port: int) -> None:
-        self.manager.spawn_task(self.open_server_async(port))
+    def open_server(self, host: str, port: int) -> None:
+        self.manager.spawn_task(self.open_server_async(host, port))
 
-    async def open_server_async(self, port: int):
+    async def open_server_async(self, host: str, port: int):
         self.emit(StandardEvents.INFO, f"Server opened! Port: {port}")
-        await asyncio.start_server(self.srv_callback, "127.0.0.1", port)
+        await asyncio.start_server(self.srv_callback, host, port)
 
     async def srv_callback(
         self,

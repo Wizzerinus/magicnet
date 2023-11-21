@@ -165,13 +165,9 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         """
 
     @abc.abstractmethod
-    def open_server(self, port: int) -> None:
+    def open_server(self, *args) -> None:
         """
         Beging listening on a server.
-        Note that the port is not required to be used, and is mostly used
-        as an identifier of a certain network role.
-        create_handle() should be called whenever a new client connects.
-        destroy_handle() should be called whenever a client disconnects.
         datagram_received() should be called whenever a datagram is obtained.
         """
 

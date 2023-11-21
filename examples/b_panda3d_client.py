@@ -32,7 +32,7 @@ transport = {
 
 client = NetworkManager.create_root(
     transport_type=EverywhereTransportManager,
-    transport_params=("client", b_common.ports, transport),
+    transport_params=("client", transport),
     extras=b_common.extra_message_types,
     shutdown_on_disconnect=True,
 )
@@ -59,5 +59,5 @@ entry = DirectEntry(pos=(-0.5, 0, -0.075), scale=0.1, command=do_send)
 textbox = DirectLabel(
     pos=(0, 0, 0.075), scale=0.1, text="Enter your name:", relief=None
 )
-client.open_connection("127.0.0.1", 5000)
+client.open_connection(server=("127.0.0.1", 5000))
 base.run()

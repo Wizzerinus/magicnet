@@ -99,4 +99,3 @@ transport = {
         )
     }
 }
-ports = {5000: "client", 5001: "server"}

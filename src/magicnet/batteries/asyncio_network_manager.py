@@ -71,20 +71,34 @@ class AsyncIONetworkManager(NetworkManager):
         self.spawned_tasks.add(task)
         task.add_done_callback(self.despawn_task)
 
-    def open_server(self):
+    def open_server(self, **kwargs):
         """
-        Note: this method is blocking, no code will be executed after this.
+        Starts one or more servers.
+        Note that kwargs should map the foreign role to the parameters
+        provided to that role. So if you run this on a node with
+        the role = 'server', and the other node in your network
+        is called 'client', you should map 'client' to the parameters.
+
+        Note: this method is blocking, no code will be executed after this
+        until the server is stopped.
         """
         super_open_server = super().open_server
-        self.loop.call_soon(lambda: super_open_server())
+        self.loop.call_soon(lambda: super_open_server(**kwargs))
         self.loop.run_forever()
 
-    def open_connection(self, *address):
+    def open_connection(self, **kwargs):
         """
-        Note: this method is blocking, no code will be executed after this.
+        Connects to one or more servers.
+        Note that kwargs should map the foreign role to the parameters
+        provided to that role. So if you run this on a node with
+        the role = 'client', and the other node in your network
+        is called 'server', you should map 'server' to the parameters.
+
+        Note: this method is blocking, no code will be executed after this
+        until the client is disconnected.
         """
         super_open_connection = super().open_connection
-        self.loop.call_soon(lambda: super_open_connection(*address))
+        self.loop.call_soon(lambda: super_open_connection(**kwargs))
         self.loop.run_forever()
 
     def wait_for_connection(self) -> asyncio.Future[ConnectionHandle]:

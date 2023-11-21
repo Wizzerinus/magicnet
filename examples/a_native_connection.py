@@ -19,12 +19,11 @@ transport = {
         "server": TransportParameters(encoder, SingleAppTransport, None, middlewares)
     }
 }
-ports = {5000: "client", 5001: "server"}
 
 
 server = NetworkManager.create_root(
     transport_type=EverywhereTransportManager,
-    transport_params=("server", ports, transport),
+    transport_params=("server", transport),
     motd="An example native host",
 )
 sr_logger = server.create_child(LoggerNode, prefix="native.server")
@@ -32,14 +31,14 @@ sr_logger.listen(MNEvents.HANDLE_ACTIVATED, functools.partial(print, "server han
 
 client = NetworkManager.create_root(
     transport_type=EverywhereTransportManager,
-    transport_params=("client", ports, transport),
+    transport_params=("client", transport),
 )
 cl_logger = client.create_child(LoggerNode, prefix="native.client")
 cl_logger.listen(MNEvents.MOTD_SET, functools.partial(cl_logger.log, logging.INFO))
 cl_logger.listen(MNEvents.DISCONNECT, functools.partial(cl_logger.log, logging.WARNING))
 cl_logger.listen(MNEvents.HANDLE_ACTIVATED, functools.partial(print, "client handle:"))
 
-server.open_server()
-client.open_connection(server)
+server.open_server(client=())
+client.open_connection(server=[server])
 message = NetMessage(StandardMessageTypes.HELLO, [2, b"123"])
 client.send_message(message)

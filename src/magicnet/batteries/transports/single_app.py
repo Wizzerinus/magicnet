@@ -44,7 +44,8 @@ class SingleAppTransport(TransportHandler):
     def before_disconnect(self, handle: ConnectionHandle) -> None:
         self.handle_map.pop(handle.connection_data)
 
-    def open_server(self, port: int) -> None:
+    def open_server(self) -> None:
+        # Deliberately unneeded
         pass
 
     def shutdown(self):
