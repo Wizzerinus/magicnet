@@ -25,6 +25,13 @@ class ProtocolEncoder(abc.ABC):
         """
         Packs a sequence of messages into a datagram,
         that can be sent through Transport.
+        Note that the encoder must be able to at least pack the 'hashable' type,
+        which includes the following types, with the exception of recursive types:
+
+        - signed and unsigned 64-byte integers, strings, bytestrings,
+          referred to as "primitives".
+        - tuples and lists made of hashables.
+        - dictionaries with primitive keys and hashable values.
         """
 
     @abc.abstractmethod

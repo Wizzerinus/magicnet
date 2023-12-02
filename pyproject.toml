@@ -3,11 +3,12 @@
 select = ["E", "F", "W", "I", "N", "UP", "YTT", "ASYNC", "S", "BLE", "FBT", "B",
           "A001", "A002", "DTZ", "G", "PIE", "T20", "RET", "TID", "PTH",
           "ERA", "PERF", "ISC"]
+ignore = ["PERF203"]
 
 line-length = 90
 target-version = "py310"
 src = ["src"]
-extend-exclude = ["examples"]
+extend-exclude = ["examples", "tests"]
 
 [tool.ruff.lint.pyflakes]
 extend-generics = [
@@ -36,8 +37,11 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-standard = ["msgpack~=1.0", "pydantic~=2.0"]
+standard = ["msgpack~=1.0"]
 
 [project.urls]
 homepage = "https://github.com/wizzerinus/magicnet"
 bugtracker = "https://github.com/wizzerinus/magicnet/issues"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

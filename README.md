@@ -44,8 +44,6 @@ The default installation of MagicNetworking has no dependencies and can be used 
 however, it is recommended to install `magicnet[standard]` which includes the following:
 
 * Msgpack, for more efficient message packager.
-* Pydantic, for type validation middleware
-  (by default, unsocilited clients can cause errors by sending valid but semantically malformed messages).
 
 ---
 
