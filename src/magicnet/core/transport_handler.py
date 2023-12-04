@@ -89,7 +89,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         self.connections.pop(handle.uuid, None)
 
     def send_motd(self, handle: ConnectionHandle):
-        self.connections[handle.uuid] = handle
+        self.manage_handle(handle)
         message = NetMessage(
             StandardMessageTypes.MOTD, [self.manager.motd], destination=handle
         )
@@ -110,11 +110,11 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         for index, middleware in enumerate(all_middlewares):
             self.create_child(middleware, priority=index)
 
-    def datagram_received(self, connection: ConnectionHandle, datagram: bytes):
+    def datagram_received(self, handle: ConnectionHandle, datagram: bytes):
         datagram = self.calculate(MNMathTargets.BYTE_RECV, datagram)
         unpacked = self.encoder.unpack(datagram)
-        unpacked = self.__set_connection(connection, unpacked)
-        converted = self.__convert_messages(unpacked, MNMathTargets.MSG_RECV)
+        unpacked = self.__set_connection(handle, unpacked)
+        converted = self.__convert_messages(handle, unpacked, MNMathTargets.MSG_RECV)
         self.emit(MNEvents.DATAGRAM_RECEIVED, converted)
 
     @staticmethod
@@ -123,9 +123,14 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
             message.sent_from = connection
             yield message
 
-    def __convert_messages(self, messages: Iterable[NetMessage], event: MNMathTargets):
+    def __convert_messages(
+        self,
+        handle: ConnectionHandle,
+        messages: Iterable[NetMessage],
+        event: MNMathTargets,
+    ):
         for message in messages:
-            if converted := self.calculate(event, message):
+            if converted := self.calculate(event, message, handle):
                 yield converted
 
     def deliver(self, messages: Iterable[NetMessage]) -> None:
@@ -146,7 +151,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def __deliver_to_handle(
         self, handle: ConnectionHandle, messages: Iterable[NetMessage]
     ) -> None:
-        converted = self.__convert_messages(messages, MNMathTargets.MSG_SEND)
+        converted = self.__convert_messages(handle, messages, MNMathTargets.MSG_SEND)
         datagram = self.encoder.pack(converted)
         self.send(handle, self.calculate(MNMathTargets.BYTE_SEND, datagram))
 
