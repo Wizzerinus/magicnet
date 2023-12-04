@@ -4,7 +4,11 @@ from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage
 from magicnet.protocol import network_types
 from magicnet.protocol.processor_base import MessageProcessor
-from magicnet.protocol.protocol_globals import StandardDCReasons, mn_proto_version
+from magicnet.protocol.protocol_globals import (
+    StandardDCReasons,
+    StandardMessageTypes,
+    mn_proto_version,
+)
 from magicnet.util.messenger import StandardEvents
 
 
@@ -18,7 +22,12 @@ class MsgMotd(MessageProcessor):
             return
         motd = message.parameters[0]
         self.emit(MNEvents.MOTD_SET, motd)
-        message.sent_from.transport.send_hello(message.sent_from)
+        message = NetMessage(
+            StandardMessageTypes.HELLO,
+            [mn_proto_version, self.manager.network_hash],
+            destination=message.sent_from,
+        )
+        self.manager.send_message(message)
         message.sent_from.activate()
 
 
