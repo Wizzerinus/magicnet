@@ -4,8 +4,8 @@ import dataclasses
 from collections.abc import Callable
 from typing import Any, cast
 
+from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
-from magicnet.core.errors import DataValidationError
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage
 from magicnet.core.transport_handler import TransportMiddleware
@@ -18,7 +18,7 @@ def create_validator(input_type: type) -> Callable[[Any], tuple[bool, Any]]:
     def test(value):
         try:
             check_type(value, input_type)
-        except DataValidationError as e:
+        except errors.DataValidationError as e:
             return False, str(e)
         else:
             return True, value
@@ -44,27 +44,28 @@ class MessageValidatorMiddleware(TransportMiddleware):
         for ident, method in all_methods:
             method = cast(MessageProcessor, method)
             if method.arg_type is not None:
-                validator = create_validator(method.arg_type)
-                self.validators[ident] = validator
-        self.add_message_operator(self.validate_message_send, self.validate_message)
+                self.validators[ident] = method.arg_type
+        self.add_message_operator(
+            self.validate_message_send, self.validate_message_recv
+        )
 
-    def validate_message(
-        self, message: NetMessage, _handle: ConnectionHandle, *, do_warn: bool = True
-    ):
+    def validate_message_send(self, message: NetMessage, _handle: ConnectionHandle):
         if message.message_type not in self.validators:
             return message
-        valid, params = self.validators[message.message_type](message.parameters)
-        if not valid:
-            if do_warn:
-                self.emit(
-                    StandardEvents.WARNING,
-                    f"Invalid parameters received: {params}! Ignoring.",
-                )
-            return None
-        message.parameters = params
+
+        # will raise if something is wrong
+        check_type(message.parameters, self.validators[message.message_type])
         return message
 
-    def validate_message_send(self, message: NetMessage, handle: ConnectionHandle):
-        if not self.validate_message(message, handle, do_warn=False):
-            raise TypeError(f"Invalid parameters in message: {message}")
-        return message
+    def validate_message_recv(self, message: NetMessage, _handle: ConnectionHandle):
+        if message.message_type not in self.validators:
+            return message
+
+        try:
+            check_type(message.parameters, self.validators[message.message_type])
+        except errors.DataValidationError as e:
+            self.emit(
+                StandardEvents.WARNING, f"Invalid parameters in message {message}: {e}"
+            )
+        else:
+            return message

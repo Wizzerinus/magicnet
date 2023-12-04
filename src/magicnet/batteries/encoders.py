@@ -4,6 +4,8 @@ import json
 from collections.abc import Iterator
 from io import BytesIO
 
+from magicnet.core import errors
+
 try:
     import msgpack
 except ImportError:
@@ -24,7 +26,7 @@ class MsgpackEncoder(ProtocolEncoder):
 
     def __init__(self):
         if msgpack is None:
-            raise RuntimeError("msgpack must be installed to run MsgpackEncoder!")
+            raise errors.DependencyMissing("msgpack", "MsgpackEncoder")
 
     def pack(self, messages: Iterator[NetMessage]) -> bytes:
         return b"".join(msgpack.packb(msg.value) for msg in messages)

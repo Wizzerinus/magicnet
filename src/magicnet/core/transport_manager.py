@@ -7,6 +7,7 @@ from collections import defaultdict
 from collections.abc import Collection, Iterable
 from typing import TypeVar, cast
 
+from magicnet.core import errors
 from magicnet.core.handle_filter import HandleFilter
 from magicnet.core.net_message import NetMessage
 from magicnet.core.protocol_encoder import ProtocolEncoder
@@ -147,7 +148,7 @@ class TransportManager(MessengerNode, abc.ABC):
     def open_servers(self, **kwargs):
         for role in kwargs:
             if role not in self.transports:
-                raise ValueError(f"Unknown target role: {role}")
+                raise errors.UnknownRole(role)
 
         for role, args in kwargs.items():
             transport = self.transports[role]
@@ -156,7 +157,7 @@ class TransportManager(MessengerNode, abc.ABC):
     def make_connections(self, **kwargs):
         for role in kwargs:
             if role not in self.transports:
-                raise ValueError(f"Unknown target role: {role}")
+                raise errors.UnknownRole(role)
 
         for role, args in kwargs.items():
             transport = self.transports[role]

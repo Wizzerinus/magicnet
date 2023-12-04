@@ -3,6 +3,7 @@ __all__ = ["ProtocolEncoder"]
 import abc
 from collections.abc import Iterable
 
+from magicnet.core import errors
 from magicnet.core.net_message import NetMessage
 
 
@@ -52,4 +53,4 @@ class ProtocolEncoder(abc.ABC):
 
         if self.KNOWN_SYMMETRIC:
             return self
-        raise TypeError(f"Invalid attempt to symmetrize {self.__class__.__name__}!")
+        raise errors.AsymmetricProtocolProvided(self.__class__.__name__)

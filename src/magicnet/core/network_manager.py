@@ -4,6 +4,7 @@ import dataclasses
 from collections.abc import Iterable
 from typing import Generic, TypeVar
 
+from magicnet.core import errors
 from magicnet.core.datagram_processor import DatagramProcessor
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage, standard_range
@@ -56,16 +57,14 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
 
     def __post_init__(self):
         if self.extras and any(value in standard_range for value in self.extras):
-            raise ValueError(
-                "All extra callbacks should be outside the standard range!"
-            )
+            raise errors.ExtraCallbacksProvided()
         if self.transport is not None:
             self.transport.parent = self
         elif self.transport_type is not None and self.transport_params is not None:
             self.transport = self.transport_type.from_map(self, *self.transport_params)
             self.transport.parent = self
         else:
-            raise ValueError("Transport or transport type should be provided!")
+            raise errors.ComponentNotProvided("transport")
         self.dg_processor = self.create_child(DatagramProcessor, extras=self.extras)
         self.listen(MNEvents.DATAGRAM_RECEIVED, self.process_datagram)
         if self.shutdown_on_disconnect:
@@ -97,7 +96,7 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
         """
 
         if not kwargs:
-            raise TypeError("open_server requires at least one set of parameters!")
+            raise errors.ConnectionParametersMissing("open_server")
         self.emit(MNEvents.BEFORE_LAUNCH)
         self.emit(StandardEvents.INFO, "Opening network servers!")
         self.transport.open_servers(**kwargs)
@@ -115,7 +114,7 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
         """
 
         if not kwargs:
-            raise TypeError("open_connection requires at least one set of parameters!")
+            raise errors.ConnectionParametersMissing("open_connection")
 
         self.emit(MNEvents.BEFORE_LAUNCH)
         self.emit(StandardEvents.INFO, "Connecting to a server!")

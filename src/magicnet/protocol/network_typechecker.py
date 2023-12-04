@@ -18,7 +18,7 @@ from typing import (
     get_origin,
 )
 
-from magicnet.core.errors import DataValidationError
+from magicnet.core import errors
 from magicnet.protocol import network_types
 
 
@@ -27,7 +27,7 @@ def check_dict(value, hint, memory):
     if not args:
         return
     if len(args) != 2:
-        raise DataValidationError(f"Unable to validate a dictionary through {hint}")
+        raise errors.InvalidValidatorArguments(hint)
     for k, v in value.items():
         check_type(k, args[0], memory)
         check_type(v, args[1], memory)
@@ -38,7 +38,7 @@ def check_list(value, hint, memory):
     if not args:
         return
     if len(args) != 1:
-        raise DataValidationError(f"Unable to validate a list through {hint}")
+        raise errors.InvalidValidatorArguments(hint)
     for it in value:
         check_type(it, args[0], memory)
 
@@ -50,17 +50,13 @@ def check_tuple(value, hint, memory):
     match args:
         case ((),):
             if len(value) != 0:
-                raise DataValidationError(
-                    f"Expected tuple length 0, got {value} instead"
-                )
+                raise errors.WrongTupleLength(0, value)
         case (t, v) if v is Ellipsis:
             for it in value:
                 check_type(it, t, memory)
         case _:
             if len(value) != len(args):
-                raise DataValidationError(
-                    f"Expected tuple length {len(args)}, got {value} instead"
-                )
+                raise errors.WrongTupleLength(len(args), value)
             for it, arg in zip(value, args, strict=True):
                 check_type(it, arg, memory)
 
@@ -69,17 +65,17 @@ def check_union(value, hint, memory):
     for field in get_args(hint):
         try:
             check_type(value, field, memory)
-        except DataValidationError:
+        except errors.DataValidationError:
             pass
         else:
             return
 
-    raise DataValidationError(f"Union checks exceeded for {value}")
+    raise errors.UnionValidationFailed(value, hint)
 
 
 def check_none(value, hint, memory):
     if value is not None:
-        raise DataValidationError(f"Expected None, got {value} instead")
+        raise errors.NoneRequired(value)
 
 
 VALIDATORS = {
@@ -98,7 +94,7 @@ MUTABLE_TYPES = {dict, list}
 def check_predicates(value, metadata):
     for predicate in metadata:
         if callable(predicate) and not predicate(value):
-            raise DataValidationError(f"{value}: expected {predicate.__name__} to hold")
+            raise errors.PredicateValidationFailed(value, predicate)
 
 
 def check_type(value, hint: type[network_types.hashable], memory: dict | None = None):
@@ -116,15 +112,13 @@ def check_type(value, hint: type[network_types.hashable], memory: dict | None = 
         return
 
     if origin_type not in SKIP_ISINSTANCE and not isinstance(value, origin_type):
-        raise DataValidationError(
-            f"{value}: expected {origin_type.__name__}, got {type(value).__name__}"
-        )
+        raise errors.TypeComparisonFailed(origin_type, value)
 
     memory = memory or {}
     if origin_type in MUTABLE_TYPES:
         key = id(value)
         if key in memory:
-            raise DataValidationError(f"{value}: recursion loop detected")
+            raise errors.RecursiveTypeProvided(value)
         memory[key] = 1
 
     if origin_type in VALIDATORS:
