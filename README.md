@@ -80,7 +80,7 @@ class MsgCustom(MessageProcessor):
         print(f"Client {client_name} sent:", message.parameters[0])
         to_send = NetMessage(
             MSG_RESPONSE,
-            ["".join(reversed(message.parameters[0]))],
+            ("".join(reversed(message.parameters[0])), ),
             # uncomment if you want only the sender to receive the message
             # destination=message.sent_from,
         )

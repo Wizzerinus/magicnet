@@ -24,8 +24,8 @@ class MsgMotd(MessageProcessor):
         self.emit(MNEvents.MOTD_SET, motd)
         message = NetMessage(
             StandardMessageTypes.HELLO,
-            [mn_proto_version, self.manager.network_hash],
-            destination=message.sent_from,
+            (mn_proto_version, self.manager.network_hash),
+            f_destination=message.sent_from,
         )
         self.manager.send_message(message)
         message.sent_from.activate()

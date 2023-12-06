@@ -43,12 +43,12 @@ cl_logger.listen(MNEvents.DISCONNECT, functools.partial(cl_logger.log, logging.W
 
 def do_send(x):
     if not base.sent_name:
-        msg = NetMessage(b_common.MSG_SET_NAME, [x])
+        msg = NetMessage(b_common.MSG_SET_NAME, (x,))
         client.send_message(msg)
         base.sent_name = True
         textbox["text"] = f"Name: {x}"
     else:
-        msg = NetMessage(b_common.MSG_CUSTOM, [x])
+        msg = NetMessage(b_common.MSG_CUSTOM, (x,))
         client.send_message(msg)
     entry.set("")
 

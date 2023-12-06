@@ -40,5 +40,5 @@ cl_logger.listen(MNEvents.HANDLE_ACTIVATED, functools.partial(print, "client han
 
 server.open_server(client=())
 client.open_connection(server=[server])
-message = NetMessage(StandardMessageTypes.HELLO, [2, b"123"])
+message = NetMessage(StandardMessageTypes.HELLO, (2, b"123"))
 client.send_message(message)

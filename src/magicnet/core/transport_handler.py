@@ -91,16 +91,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def send_motd(self, handle: ConnectionHandle):
         self.manage_handle(handle)
         message = NetMessage(
-            StandardMessageTypes.MOTD, [self.manager.motd], destination=handle
-        )
-        self.manager.send_message(message)
-
-    def send_hello(self, handle: ConnectionHandle):
-        self.connections[handle.uuid] = handle
-        message = NetMessage(
-            StandardMessageTypes.HELLO,
-            [mn_proto_version, self.manager.network_hash],
-            destination=handle,
+            StandardMessageTypes.MOTD, (self.manager.motd,), destination=handle
         )
         self.manager.send_message(message)
 

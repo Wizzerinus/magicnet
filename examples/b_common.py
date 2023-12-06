@@ -35,7 +35,7 @@ class MsgCustom(MessageProcessor):
         print(f"Client {client_name} sent:", message.parameters[0])
         to_send = NetMessage(
             MSG_CUSTOM_RESP,
-            ["".join(reversed(message.parameters[0]))],
+            ("".join(reversed(message.parameters[0])),),
             destination=message.sent_from,
         )
         self.manager.send_message(to_send)
@@ -43,7 +43,7 @@ class MsgCustom(MessageProcessor):
         # to everyone except the destination, see below
         broadcast = NetMessage(
             MSG_BROADCAST,
-            [client_name, message.parameters[0]],
+            (client_name, message.parameters[0]),
             destination=message.sent_from,
         )
         self.manager.send_message(broadcast)

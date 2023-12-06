@@ -40,14 +40,14 @@ async def read_loop():
     writer.write(b"Enter your username: ")
     await writer.drain()
     name = (await reader.readuntil()).decode("utf-8").strip()
-    msg = NetMessage(b_common.MSG_SET_NAME, [name])
+    msg = NetMessage(b_common.MSG_SET_NAME, (name,))
     client.send_message(msg)
     writer.write(b"Username successfully set!\n")
     await writer.drain()
 
     while True:
         text = (await reader.readuntil()).decode("utf-8").strip()
-        msg = NetMessage(b_common.MSG_CUSTOM, [text])
+        msg = NetMessage(b_common.MSG_CUSTOM, (text,))
         client.send_message(msg)
 
 
