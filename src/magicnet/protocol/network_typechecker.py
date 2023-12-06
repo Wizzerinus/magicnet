@@ -51,9 +51,14 @@ def check_tuple(value, hint, memory):
         case ((),):
             if len(value) != 0:
                 raise errors.WrongTupleLength(0, value)
-        case (t, v) if v is Ellipsis:
-            for it in value:
-                check_type(it, t, memory)
+        case (*a, b, v) if v is Ellipsis:
+            fixed_type_count = len(a)
+            if fixed_type_count - 1 > len(value):
+                raise errors.WrongTupleLength(fixed_type_count - 1, value)
+            for it, arg in zip(value, a, strict=False):
+                check_type(it, arg, memory)
+            for it in value[fixed_type_count:]:
+                check_type(it, b, memory)
         case _:
             if len(value) != len(args):
                 raise errors.WrongTupleLength(len(args), value)
