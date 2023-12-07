@@ -1,10 +1,13 @@
-__all__ = []
+__all__ = ["AnnotatedValidator", "Ge", "Lt", "MaxLen"]
 
 import abc
-from typing import Annotated, ForwardRef
+from collections.abc import Callable
+from typing import Annotated, Any, ClassVar, ForwardRef
 
 
 class AnnotatedValidator(abc.ABC):
+    converter: ClassVar[Callable[[str], Any]] = str
+
     def __init__(self, arg):
         self.arg = arg
 
@@ -12,22 +15,37 @@ class AnnotatedValidator(abc.ABC):
     def __name__(self):
         return f"{self.__class__.__name__}({self.arg})"
 
+    def __repr__(self):
+        return self.__name__
+
     @abc.abstractmethod
     def __call__(self, value):
         pass
 
+    def __eq__(self, other):
+        return type(other) == type(self) and other.arg == self.arg
+
+    def __hash__(self):
+        return hash(self.__name__)
+
 
 class Ge(AnnotatedValidator):
+    converter = int
+
     def __call__(self, value):
         return value >= self.arg
 
 
 class Lt(AnnotatedValidator):
+    converter = int
+
     def __call__(self, value):
         return value < self.arg
 
 
 class MaxLen(AnnotatedValidator):
+    converter = int
+
     def __call__(self, value):
         return len(value) <= self.arg
 
