@@ -22,12 +22,12 @@ class MsgMotd(MessageProcessor):
             return
         motd = message.parameters[0]
         self.emit(MNEvents.MOTD_SET, motd)
-        message = NetMessage(
+        second_message = NetMessage(
             StandardMessageTypes.HELLO,
             (mn_proto_version, self.manager.network_hash),
             f_destination=message.sent_from,
         )
-        self.manager.send_message(message)
+        self.manager.send_message(second_message)
         message.sent_from.activate()
 
 
