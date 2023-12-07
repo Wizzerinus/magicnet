@@ -117,7 +117,14 @@ def check_type(value, hint: type[network_types.hashable], memory: dict | None = 
         return
 
     if origin_type not in SKIP_ISINSTANCE and not isinstance(value, origin_type):
-        raise errors.TypeComparisonFailed(origin_type, value)
+        # tuples and lists are interchangeable
+        # because not making this breaks a lot of things
+        if origin_type == tuple and isinstance(value, list):
+            pass
+        elif origin_type == list and isinstance(value, tuple):
+            pass
+        else:
+            raise errors.TypeComparisonFailed(origin_type, value)
 
     memory = memory or {}
     if origin_type in MUTABLE_TYPES:

@@ -77,7 +77,7 @@ def test_validation_union():
 
 def test_validation_tuple():
     check_validator(tuple[int, str], [(1, "")], [(1.1, ""), (1, "", "")])
-    check_validator(tuple[int, ...], [(1, ), (), (1, 2, 3)], [[1, 2, 3], ("", )])
+    check_validator(tuple[int, ...], [(1,), (), (1, 2, 3)], [{1: 2}, ("",)])
     check_validator(
         tuple[int, str, ...], [(1,), (1, ""), (1, "", "")], [(1.1, ""), ("", 1)]
     )
