@@ -1,15 +1,21 @@
 __all__ = ["ConnectionHandle"]
 
 import dataclasses
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import uuid4
 
+from magicnet.core import errors
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage
-from magicnet.protocol.protocol_globals import StandardMessageTypes
+from magicnet.protocol.network_typechecker import check_type
+from magicnet.protocol.protocol_globals import StandardDCReasons, StandardMessageTypes
+from magicnet.util.messenger import StandardEvents
 
 if TYPE_CHECKING:
     from magicnet.core.transport_handler import TransportHandler
+
+
+X = TypeVar("X")
 
 
 @dataclasses.dataclass
@@ -57,3 +63,29 @@ class ConnectionHandle:
             StandardMessageTypes.SHARED_PARAMETER, (name, value), f_destination=self
         )
         self.transport.manager.send_message(msg)
+
+    def get_shared_parameter(
+        self, name: str, typehint: type[X], *, disconnect: bool = False
+    ) -> tuple[bool, X]:
+        try:
+            value = self.shared_parameters[name]
+            check_type(value, typehint)
+        except (KeyError, errors.DataValidationError):
+            # This can happen, for example, when the user clears the parameter
+            # (even if it is usually set). This may be rejected by a middleware,
+            # but still possible if the middleware is bugged/etc,
+            # so we can't rely on it
+            if disconnect:
+                self.send_disconnect(
+                    StandardDCReasons.BROKEN_INVARIANT,
+                    f"Shared parameter {name} is not set",
+                )
+            else:
+                self.transport.emit(
+                    StandardEvents.WARNING,
+                    f"Unable to read the shared parameter {name} from {self.uuid}",
+                )
+
+            return False, None
+
+        return True, value

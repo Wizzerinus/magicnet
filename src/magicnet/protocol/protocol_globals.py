@@ -58,6 +58,8 @@ class StandardDCReasons(IntEnum):
     """The client hash does not match the one of the server's"""
     MESSAGE_BEFORE_HELLO = auto()
     """The client sent a disallowed message before handshake was established"""
+    BROKEN_INVARIANT = auto()
+    """One of the invariants enforced by MagicNetworking is not fulfilled"""
 
 
 mn_proto_version = 2
