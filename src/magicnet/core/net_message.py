@@ -16,7 +16,7 @@ class NetMessage:
     Custom types can be any 64-bit integers above 63.
     Those will be processed by the application logic.
     """
-    parameters: tuple = ()
+    parameters: list | tuple = ()
     """
     List of parameters of the message. Each message type
     has its own signature defined in the class.
