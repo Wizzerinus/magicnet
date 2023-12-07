@@ -144,6 +144,8 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     ) -> None:
         converted = self.__convert_messages(handle, messages, MNMathTargets.MSG_SEND)
         datagram = self.encoder.pack(converted)
+        if self.manager.debug_mode:
+            self.emit(StandardEvents.DEBUG, f"Sending datagram: {datagram.hex()}")
         self.send(handle, self.calculate(MNMathTargets.BYTE_SEND, datagram))
 
     def manage_handle(self, connection: ConnectionHandle):

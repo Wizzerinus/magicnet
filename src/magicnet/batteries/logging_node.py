@@ -36,6 +36,7 @@ class LoggerNode(MessengerNode):
             StandardEvents.WARNING, functools.partial(self.log, logging.WARNING)
         )
         self.listen(StandardEvents.INFO, functools.partial(self.log, logging.INFO))
+        self.listen(StandardEvents.DEBUG, functools.partial(self.log, logging.DEBUG))
         self.listen(StandardEvents.EXCEPTION, self.log_exc)
 
         if self.initlogger:

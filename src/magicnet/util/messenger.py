@@ -14,6 +14,7 @@ T = TypeVar("T")
 
 
 class StandardEvents(Enum):
+    DEBUG = auto()
     INFO = auto()
     WARNING = auto()
     ERROR = auto()

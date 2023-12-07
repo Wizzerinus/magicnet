@@ -81,7 +81,15 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
     def process_datagram(self, messages: Iterable[NetMessage]):
         with self.transport.message_queue:
             for msg in messages:
-                self.dg_processor.process_message(msg)
+                if self.debug_mode:
+                    self.emit(StandardEvents.DEBUG, f"Received message: {msg}")
+
+                try:
+                    self.dg_processor.process_message(msg)
+                except Exception as e:  # noqa: BLE001
+                    self.emit(
+                        StandardEvents.EXCEPTION, "Error while processing a message", e
+                    )
 
     def open_server(self, **kwargs):
         """
