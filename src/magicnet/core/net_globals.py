@@ -16,6 +16,7 @@ class MNEvents(Enum):
     BEFORE_LAUNCH = auto()
     BEFORE_SHUTDOWN = auto()
     DISCONNECT = auto()
+    BAD_NETWORK_OBJECT_CALL = auto()
 
 
 class MNMathTargets(Enum):
@@ -28,3 +29,5 @@ class MNMathTargets(Enum):
     MSG_RECV = auto()
     BYTE_SEND = auto()
     BYTE_RECV = auto()
+    VISIBLE_OBJECTS = auto()
+    FIELD_CALL_ALLOWED = auto()

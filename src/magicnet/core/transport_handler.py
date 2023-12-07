@@ -18,7 +18,7 @@ from magicnet.core.handle_filter import BaseHandleFilter, HandleFilter
 from magicnet.core.net_globals import MNEvents, MNMathTargets
 from magicnet.core.net_message import NetMessage
 from magicnet.core.protocol_encoder import ProtocolEncoder
-from magicnet.protocol.protocol_globals import StandardMessageTypes, mn_proto_version
+from magicnet.protocol.protocol_globals import StandardMessageTypes
 from magicnet.util.messenger import MessengerNode, StandardEvents
 
 if TYPE_CHECKING:
@@ -91,7 +91,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def send_motd(self, handle: ConnectionHandle):
         self.manage_handle(handle)
         message = NetMessage(
-            StandardMessageTypes.MOTD, (self.manager.motd,), destination=handle
+            StandardMessageTypes.MOTD, (self.manager.motd,), f_destination=handle
         )
         self.manager.send_message(message)
 

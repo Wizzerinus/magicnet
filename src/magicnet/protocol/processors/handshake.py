@@ -47,6 +47,7 @@ class MsgHello(MessageProcessor):
             message.disconnect_sender(StandardDCReasons.HELLO_HASH_MISMATCH)
             return
         message.sent_from.activate()
+        message.sent_from.set_shared_parameter("rp", self.manager.make_repository())
 
 
 class MsgDisconnect(MessageProcessor):

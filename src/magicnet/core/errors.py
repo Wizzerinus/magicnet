@@ -2,20 +2,30 @@ __all__ = [
     "DataValidationError",
     "NetworkConnectionError",
     "NetworkConfigurationError",
+    "ApplicationConfigurationError",
+    "ApplicationRuntimeError",
     "InvalidValidatorArguments",
 ]
 
 
 class DataValidationError(TypeError):
-    pass
+    """Failed to validate some data using the runtime type checker"""
 
 
 class NetworkConnectionError(OSError):
-    pass
+    """Failed to create a socket, connect to the remote socket, etc"""
 
 
 class NetworkConfigurationError(ValueError):
-    pass
+    """Improperly configured network system"""
+
+
+class ApplicationConfigurationError(ValueError):
+    """Improperly configured application logic"""
+
+
+class ApplicationRuntimeError(RuntimeError):
+    """Part of application handled by MagicNet ceased to work properly"""
 
 
 class InvalidValidatorArguments(TypeError):
@@ -55,6 +65,16 @@ class RecursiveTypeProvided(DataValidationError):
         super().__init__(f"{value}: recursion loop detected")
 
 
+class NoValueProvided(DataValidationError):
+    def __init__(self, name: str):
+        super().__init__(f"No value provided for the parameter {name}")
+
+
+class TooManyArguments(DataValidationError):
+    def __init__(self, args: list, signature_count: int):
+        super().__init__(f"Too many arguments: {args} (expected {signature_count})")
+
+
 class DependencyMissing(NetworkConfigurationError):
     def __init__(self, dependency: str, usecase: str):
         super().__init__(f"{dependency} is required to use {usecase}")
@@ -83,3 +103,82 @@ class ConnectionParametersMissing(NetworkConfigurationError):
 class UnknownRole(NetworkConfigurationError):
     def __init__(self, role: str):
         super().__init__(f"Unknown role {role}")
+
+
+class UnnamedField(ApplicationConfigurationError):
+    def __init__(self, classname: str):
+        super().__init__(f"Network class {classname} has an unnamed field")
+
+
+class FieldNotInitialized(ApplicationConfigurationError):
+    def __init__(self, classname: str, field_name: str):
+        super().__init__(f"Network field {classname}.{field_name} is not initialized")
+
+
+class KeywordOnlyFieldArgument(ApplicationConfigurationError):
+    def __init__(self, arg_name: str):
+        super().__init__(f"Some network field has a keyword-only argument {arg_name}")
+
+
+class RegistryObjectAfterInitialization(ApplicationConfigurationError):
+    def __init__(self, class_name: str):
+        super().__init__(f"{class_name} registered after the registry is finalized")
+
+
+class MultipleRegistryInitializations(ApplicationConfigurationError):
+    def __init__(self):
+        super().__init__("The network registry was initialized multiple times")
+
+
+class InvalidClientRepository(ApplicationConfigurationError):
+    def __init__(self, value: int):
+        super().__init__(f"Invalid client repository: {value}")
+
+
+class NoNetworkName(ApplicationConfigurationError):
+    def __init__(self, class_name: str):
+        super().__init__(f"Class {class_name} has no network name")
+
+
+class NoObjectRole(ApplicationConfigurationError):
+    def __init__(self, class_name: str, network_name: str):
+        super().__init__(f"Class {class_name} has no role (net name: {network_name})")
+
+
+class UnsupportedNetworkType(ApplicationConfigurationError):
+    pass
+
+
+class UnsupportedForwardRef(UnsupportedNetworkType):
+    def __init__(self, forward_ref):
+        super().__init__(f"ForwardRef args are currently not supported: {forward_ref}")
+
+
+class UnsupportedTypehintName(UnsupportedNetworkType):
+    def __init__(self, typehint):
+        super().__init__(f"The following type is currently not supported: {typehint}")
+
+
+class UnsupportedAnnotator(UnsupportedNetworkType):
+    def __init__(self, func):
+        super().__init__(f"The following annotator is not supported: {func}")
+
+
+class UnsupportedMarshalledType(UnsupportedNetworkType):
+    def __init__(self, nettype):
+        super().__init__(f"The following marshal type is not supported: {nettype}")
+
+
+class ForeignObjectUsed(ApplicationRuntimeError):
+    def __init__(self, name):
+        super().__init__(f"Attempt to use the foreign-only object {name}")
+
+
+class RepolessClientCreatesNetworkObject(ApplicationRuntimeError):
+    def __init__(self, name):
+        super().__init__(f"Attempt to create an object {name} without a repository")
+
+
+class UnknownObjectMessage(ApplicationRuntimeError):
+    def __init__(self, object_name, message):
+        super().__init__(f"Attempt to call unknown field {object_name}.{message}")

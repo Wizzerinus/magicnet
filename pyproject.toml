@@ -3,7 +3,7 @@
 select = ["E", "F", "W", "I", "N", "UP", "YTT", "ASYNC", "S", "BLE", "FBT", "B",
           "A001", "A002", "DTZ", "G", "PIE", "T20", "RET", "TID", "PTH",
           "ERA", "PERF", "ISC", "TRY"]
-ignore = ["PERF203", "N818"]
+ignore = ["PERF203", "N818", "PTH123"]
 
 line-length = 90
 target-version = "py310"

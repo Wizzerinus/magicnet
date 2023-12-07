@@ -1,4 +1,4 @@
-__all__ = ["NetMessage", "standard_range"]
+__all__ = ["NetMessage", "standard_range", "client_repo_range"]
 
 import dataclasses
 from typing import TYPE_CHECKING
@@ -55,3 +55,4 @@ class NetMessage:
 
 
 standard_range = range(64)
+client_repo_range = range(1, 128)

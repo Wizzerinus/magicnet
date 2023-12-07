@@ -12,7 +12,8 @@ MagicNet is a modern library for building real-time web applications.
 
 Its key features are:
 
-* **Client simplicity**: write simple and intuitive Python code, typehint your code if you want,
+* **Client simplicity**: write simple and intuitive Python code, typehint your code if you want
+  (strongly recommended to use typehints with the object-based API but still optional),
   write zero boilerplate, and get efficient network interaction in any scenario.
 * **Client flexibility**:
   * MagicNet makes no assumptions about the networking stack of your application.
@@ -69,6 +70,8 @@ MSG_RESPONSE = 65
 
 class MsgCustom(MessageProcessor):
     arg_type = tuple[network_types.s256]
+    # If typehints are used and the MessageValidation middleware
+    # is used, messages that do not match the typehints are rejected
 
     def invoke(self, message: NetMessage):
         # this will be called on the server, as the client sends this message
@@ -104,7 +107,69 @@ client.send(msg)
 
 ### Object API
 
-(currently not implemented)
+```python
+import dataclasses
+
+from magicnet.netobjects.network_object import NetworkObject
+from magicnet.netobjects.network_field import NetworkField
+from magicnet.protocol import network_types
+
+# On the server
+@dataclasses.dataclass
+class NetworkNumberServer(NetworkObject):
+    network_name = "one-number"
+    object_role = 1
+    value: int = dataclasses.field(init=False, default=0)
+
+    def net_create(self):
+        pass
+
+    def net_delete(self):
+        pass
+
+    @NetworkField
+    def set_init_value(self, value: network_types.int32):
+        # If typehints are used, all messages that do not pass the typehints are rejected
+        # Note: only a subset of typehints is supported due to the difficulty
+        # of encoding a typehint as a string (which is required to i.e.
+        # exclude server classes from being imported in the client)
+        self.value = value
+        self.send_message("set_current_value", [self.value])
+
+    @NetworkField
+    def add_value(self, value: network_types.int32):
+        self.value += value
+        # Not validating integer overflow in this example, for simplicity
+        # (the server won't crash, just the number won't be sent back)
+        self.send_message("set_current_value", [self.value])
+
+# On the client
+@dataclasses.dataclass
+class NetworkNumberClient(NetworkObject):
+    network_name = "one-number"
+    object_role = 0
+    value: int = dataclasses.field(init=False, default=0)
+
+    def net_create(self):
+        # This runs when the object was created
+        self.send_message("add_value", [15])
+
+    def net_delete(self):
+        pass
+
+    @NetworkField
+    def set_current_value(self, value: network_types.int32):
+        print(f"Object's value changed: {self.value} -> {value}")
+        self.value = value
+
+# Creating the object
+# The API is the same on the server and the client side, although
+# the semantics of the network datagrams used differ
+client = ...
+obj = NetworkNumberClient(controller=client)
+obj.send_message("set_init_value", [10])
+obj.request_generate()
+```
 
 Full-fledged examples can be found in `examples` directory.
 
