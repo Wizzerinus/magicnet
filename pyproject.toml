@@ -1,17 +1,23 @@
 [project]
 name = "magicnet"
-version = "0.0.1"
 authors = [
     {name = "Wizzerinus", email = "quillinde@gmail.com"}
 ]
 description = "MagicNet is a modern and flexible networking library"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
 classifiers = [
-    "Programming Language :: Python :: 3.10",
+    "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
 ]
+dynamic = ["version"]
+keywords = ["networking", "astron"]
 
 [tool.ruff]
 
@@ -32,12 +38,20 @@ extend-generics = [
     "magicnet.util.messenger.MessengerNode",
 ]
 
+[tool.hatch]
+version.path = "src/magicnet/__about__.py"
+
+[tool.hatch.build]
+exclude = ["/tests", "/examples"]
+sources = ["src"]
+
 [build-system]
-requires = ["setuptools>=60", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 standard = ["msgpack~=1.0"]
+dev = ["magicnet[standard]", "black", "ruff", "pytest", "hatch"]
 
 [project.urls]
 homepage = "https://github.com/wizzerinus/magicnet"

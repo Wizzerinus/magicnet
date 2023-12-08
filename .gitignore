@@ -2,3 +2,4 @@
 .ruff_cache
 .pytest_cache
 examples/*-signature.json
+dist
