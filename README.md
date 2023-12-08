@@ -23,6 +23,8 @@ Its key features are:
     Most of the time, changing the networking stack is as simple as changing one variable
     indicating the way to send pure bytestrings. The application code itself
     does not need to care about the networking stack or event loop used.
+  * MagicNet packs both a low-level Message API and a high-level Object API (see examples below).
+    This allows writing domain-specific code in the way that is best suited for a certain problem.
 * **Server flexibility**: MagicNet can be used with a simple client-server structure,
   as well as a more complicated structure with multiple servers, proxies, etc.
   Proxies themselves can be also implemented in the same library using the
@@ -55,6 +57,17 @@ and the Object-level API (object-oriented). Both APIs work on the same
 underlying networking stack and are useful in different scenarios:
 globally used methods are likely better to put into the Message API,
 while methods specific to an object are likely better as an object API.
+
+### Running provided examples
+
+Full-fledged examples can be found in `examples` directory.
+
+* Native connection: run `a_native_connection.py`.
+  * Note that this example will immediately exit after sending a few messages.
+* Client-server basics: run `b_server.py`, then `b_client.py` or `b_panda3d_client.py`
+  * The Panda3D client requires a reasonably recent version of Panda3D.
+* Network objects: run `c_network_objects/c_marshal_things.py`, then `c_network_objects/c_server.py`,
+  then `c_network_objects/c_client.py`.
 
 ### Message API
 
@@ -171,7 +184,107 @@ obj.send_message("set_init_value", [10])
 obj.request_generate()
 ```
 
-Full-fledged examples can be found in `examples` directory.
+---
+
+## Component information
+
+This is the list of all components I would want to implement, but not all of them are done yet.
+The components that can be implemented easily but are not in the standard library
+due to being opinionated are marked as domain-specific.
+
+### Application Layer
+
+* **Message API** - fully functional
+* **Object API** - in progress, functional but would want to add more features
+* **Data persistence** - not implemented
+  * Most likely, there will be two batteries to persist object state, one using MongoDB,
+    and another one using SQLAlchemy.
+
+### Message and Connection Layer
+
+* **Handshake** - fully functional
+* **Object management** - in progress, see above
+* **Shared parameters** - fully functional
+  * Includes a way to save data on a connection that is shared between both sides.
+    Note that there is not a built in security protocol for this. 
+* **Middleware servers** - not implemented
+  * This includes, for example, a server that merely routes datagrams,
+    instead of processing it immediately. This would require somehow packing the
+    connection into the datagram and making virtual connections on both sides.
+    For the usecases of this, see below "High-load scenarios".
+* **Connection transfer** - not implemented
+  * This is useful for High-load scenarios as well as reconnection.
+* **Reconnection** - not implemented
+  * As reconnection cannot be implemented on some stacks like TCP,
+    it really is just "making a new connection to the same server without losing state".
+    This is application logic-dependent and may be easier than I think it is.
+
+### Network Layer
+
+This part is really annoying due to a completely unavoidable combinatoric explosion
+of connection types and event loops being in use (two in the standard library and many
+other event loops made by other libraries).
+
+* **In-memory transfer (server and client in the same process)** - functional
+  * This may sound stupid but it's actually really nice for local prototyping!
+* **AsyncIO/TCP combination** - functional
+* **AsyncIO/UDP combination** - not done
+* **AsyncIO/Websockets combination** - not done
+* **Threads/TCP combination** - not done
+* **Threads/UDP combination** - not done
+* **Threads/Websockets combination** - not done
+
+* **Bonus: Panda3D/TCP combination** - functional but not included in the main distribution
+  * Currently this may be downloaded from the `examples` folder and used mostly as-is.
+
+### Security Layer
+
+* **Message API typechecking** - functional
+  * Requires the use of `MessageValidatorMiddleware`
+    (recommended to have in all setups in a bridge or server node
+     to prevent malicious clients from crashing a server)
+* **Object API typechecking** - fully functional
+  * Available out of the box
+* **Message API permissions** - domain-specific
+  * Requires the use of a custom TransportMiddleware
+* **Object API permissions** - domain-specific
+  * Requires the use of a custom event handler (`MNMathTargets.FIELD_CALL_ALLOWED`)
+* **Message API routing** - domain-specific 
+  * Requires the use of a custom TransportManager or HandleFilter
+* **Object API routing** - not implemented
+  * Zone-based message routing is planned (each client "sees" a set of zones,
+    and each object is in exactly one zone). The API already includes the
+    zone numbers on all objects, but they're currently not used.
+* **Message-level security** - not implemented / domain-specific
+  * This includes things like "Reject MOTD from the clients". Because actually,
+    currently the server will respond to the MOTD, which can be used to extract
+    the protocol hash from the server. This should be prevented through a middleware.
+    Right now there isn't one, but I will add one into the standard library at some point.
+  * This also includes things like "Encrypt all messages". This is a domain-specific area -
+    everything can be done through middlewares, and also goes out of the scope of the library.
+* **Protocol-level security** - not implemented
+  * This includes things like
+    "Prevent a client from sending 4 billion bytes in one socket operation" and
+    "Prevent 100000 clients from being created on the same IP".
+    I am not totally sure how do prevent this, anyway, and am open to suggestions.
+
+### Different scenarios
+
+* **Local development** - functional
+* **Single all-to-all communication** - functional
+* **High-load scenarios** - not implemented
+  * For high-load scenarios, sending any message that is not pointing at a certain
+    client, it will be routed to every single connected client. This is quite slow
+    in Python. For these, I recommend making a middleware server, so that the server talks
+    to the middleware, the clients talk to the middleware, and the server is behind
+    a firewall so it can't be directly connected to. Unfortunately this does not fix
+    all of the problems of such setups unless the middleware is written in a language like
+    Rust, which goes beyond the scope of this library.
+  * Another possible remedy is to have a middleware chain acting as a load balancer. For example,
+    the server talks to 10 middlewares, and each client connection is sent to one of them.
+    This reduces the load substantially, allowing better scaling, but is significantly harder
+    to implement. It also requires an ability to "transfer" a connection from one pair of clients
+    to another pair of clients (see above).
 
 ---
 
@@ -193,3 +306,20 @@ with other players, while keeping the native handler for the first player intact
 If the server has to be extracted into a separate application, the only thing that
 has to be changed is the transport handler between the first player and the server,
 with the entire game client and server code remaining intact!
+
+---
+
+## Caveats
+
+* This project is a work-in-progress, and things may change at any time.
+  More importantly, many components have not been implemented yet.
+* Things like Trio/Curio/etc.-based event loops and network transports
+  will not be implemented in the main library. (On the flip side, those aren't too hard to write
+  if you need them in your application!)
+* I am not a security specialist, so some fatal mistakes may have slipped through.
+  Please report any security issues you find on the issue tracker so I can fix them!
+* The message processing is synchronous, as this library has to work in both synchronous
+  and asynchronous contexts. This means if your messages require something like database interaction,
+  it will be harder to do efficiently without callback hell (synchronous database handlers 
+  tend to be quite slow). I do not currently have a solution in mind,
+  but will implement one if a reasonably good one is suggested.
