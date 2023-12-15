@@ -51,7 +51,9 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
     transport_params: tuple = None
     shutdown_on_disconnect: bool = False
     """If true, the manager will be closed when any handle disconnects"""
-    repository_allocator: int = dataclasses.field(init=False, default=max(client_repo_range))
+    repository_allocator: int = dataclasses.field(
+        init=False, default=max(client_repo_range)
+    )
     """We start the repository allocation from 128 and declare 1-127 hardcoded"""
     client_repository: int | None = None
     """

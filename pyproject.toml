@@ -1,3 +1,4 @@
+# Base stuff
 [project]
 name = "magicnet"
 authors = [
@@ -19,8 +20,19 @@ classifiers = [
 dynamic = ["version"]
 keywords = ["networking", "astron"]
 
-[tool.ruff]
+[project.urls]
+homepage = "https://github.com/wizzerinus/magicnet"
+bugtracker = "https://github.com/wizzerinus/magicnet/issues"
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+standard = ["msgpack~=1.0"]
+
+# Tools
+[tool.ruff]
 select = ["E", "F", "W", "I", "N", "UP", "YTT", "ASYNC", "S", "BLE", "FBT", "B",
           "A001", "A002", "DTZ", "G", "PIE", "T20", "RET", "TID", "PTH",
           "ERA", "PERF", "ISC", "TRY"]
@@ -38,6 +50,10 @@ extend-generics = [
     "magicnet.util.messenger.MessengerNode",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+# Hatch
 [tool.hatch]
 version.path = "src/magicnet/__about__.py"
 
@@ -45,17 +61,21 @@ version.path = "src/magicnet/__about__.py"
 exclude = ["/tests", "/examples"]
 sources = ["src"]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.hatch.envs.default]
+dependencies = ["magicnet[standard]"]
 
-[project.optional-dependencies]
-standard = ["msgpack~=1.0"]
-dev = ["magicnet[standard]", "black", "ruff", "pytest", "hatch"]
+[tool.hatch.envs.dev]
+dependencies = ["magicnet[standard]", "black", "ruff", "pytest"]
+[tool.hatch.envs.dev.scripts]
+run-tests = "pytest {args:tests}"
+run-black = "black {args:.}"
+run-ruff = "ruff --fix {args:.}"
+clean = ["run-black", "run-ruff"]
+check-black = "black --quiet --check --diff {args:.}"
+check-ruff = "ruff check --quiet {args:.}"
+lint = ["check-black", "check-ruff"]
 
-[project.urls]
-homepage = "https://github.com/wizzerinus/magicnet"
-bugtracker = "https://github.com/wizzerinus/magicnet/issues"
-
-[tool.pytest.ini_options]
-pythonpath = ["src"]
+[tool.hatch.envs.test]
+dependencies = ["magicnet[standard]", "black", "ruff", "pytest"]
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12"]
