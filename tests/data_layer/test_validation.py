@@ -3,8 +3,8 @@ import dataclasses
 from helpers import assert_raises
 from magicnet.core.errors import DataValidationError
 from magicnet.protocol import network_types
-from magicnet.protocol.dataclass_converter import convert_object
-from magicnet.protocol.network_typechecker import check_type
+from magicnet.util.typechecking.dataclass_converter import convert_object
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 
 def check_validator(validator, good, bad):

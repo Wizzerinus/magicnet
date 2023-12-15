@@ -48,7 +48,9 @@ class TwoNodeNetworkTester(NetworkTester):
         encoder = MsgpackEncoder()
         transport = {
             "client": {
-                "server": TransportParameters(encoder, SingleAppTransport, None, middlewares)
+                "server": TransportParameters(
+                    encoder, SingleAppTransport, None, middlewares
+                )
             }
         }
 

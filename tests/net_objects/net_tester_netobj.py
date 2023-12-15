@@ -7,7 +7,9 @@ from net_tester_generic import TwoNodeNetworkTester
 @dataclasses.dataclass
 class NetworkObjectTester(TwoNodeNetworkTester):
     @classmethod
-    def create(cls, server_class: type[NetworkObject], client_class: type[NetworkObject]):
+    def create(
+        cls, server_class: type[NetworkObject], client_class: type[NetworkObject]
+    ):
         tester = super().create()
         tester.server.object_registry.register_object(server_class)
         tester.server.object_registry.register_object(client_class, foreign=True)

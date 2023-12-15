@@ -7,9 +7,9 @@ from uuid import uuid4
 from magicnet.core import errors
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage
-from magicnet.protocol.network_typechecker import check_type
 from magicnet.protocol.protocol_globals import StandardDCReasons, StandardMessageTypes
 from magicnet.util.messenger import StandardEvents
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 if TYPE_CHECKING:
     from magicnet.core.transport_handler import TransportHandler

@@ -47,7 +47,7 @@ class NetworkObjectManager(MessengerNode):
     ):
         msg1 = NetMessage(
             StandardMessageTypes.GENERATE_OBJECT,
-            (obj.oid, obj.type, obj.owner, obj.zone),
+            (obj.oid, obj.otype, obj.owner, obj.zone),
         )
         field_messages = []
         for role, field, params in fields:
@@ -148,7 +148,7 @@ class NetworkObjectManager(MessengerNode):
         obj.object_state = ObjectState.CREATE_REQUESTED
         msg = NetMessage(
             StandardMessageTypes.CREATE_OBJECT,
-            (obj.oid, obj.type, owner, obj.zone, obj.get_loaded_params()),
+            (obj.oid, obj.otype, owner, obj.zone, obj.get_loaded_params()),
         )
         self.manager.send_message(msg)
 

@@ -6,7 +6,7 @@ from typing import Annotated, Any, TypeVar, get_args, get_origin
 
 from magicnet.core import errors
 from magicnet.protocol import network_types
-from magicnet.protocol.network_typechecker import check_type
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 T = TypeVar("T")
 

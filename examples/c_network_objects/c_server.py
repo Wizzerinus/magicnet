@@ -10,7 +10,7 @@ from magicnet.core.net_globals import MNEvents
 from magicnet.netobjects.network_field import NetworkField
 from magicnet.netobjects.network_object import NetworkObject
 from magicnet.protocol import network_types
-from magicnet.protocol.network_typechecker import check_type
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 from magicnet.util.messenger import StandardEvents
 
 

@@ -1,7 +1,10 @@
 import dataclasses
 
 from magicnet.netobjects.network_object import NetworkObject, ObjectState
-from net_objects.net_tester_netobj import SymmetricNetworkObjectTester, NetworkObjectTester
+from net_objects.net_tester_netobj import (
+    SymmetricNetworkObjectTester,
+    NetworkObjectTester,
+)
 
 
 def test_basics():

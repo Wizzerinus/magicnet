@@ -5,9 +5,9 @@ import inspect
 from typing import Annotated, Any, ForwardRef, Union, get_args, get_origin
 
 from magicnet.core import errors
-from magicnet.netobjects.network_field import FieldSignature, SignatureItem
 from magicnet.protocol import network_types
-from magicnet.protocol.network_typechecker import check_type
+from magicnet.util.typechecking.field_signature import FieldSignature, SignatureItem
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 
 class TypehintMarshal:

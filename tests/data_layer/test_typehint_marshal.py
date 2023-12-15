@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 from magicnet.protocol import network_types
-from magicnet.protocol.typehint_marshal import typehint_marshal
+from magicnet.util.typechecking.typehint_marshal import typehint_marshal
 
 
 def marshal_convert(t):

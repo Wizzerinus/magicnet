@@ -4,16 +4,17 @@ import abc
 import dataclasses
 from collections import defaultdict
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, ClassVar, Type
+from typing import TYPE_CHECKING, ClassVar
 
 from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNEvents
-from magicnet.netobjects.network_field import FieldSignature, NetworkField
+from magicnet.netobjects.network_field import NetworkField
 from magicnet.netobjects.network_object_meta import NetworkObjectMeta
-from magicnet.protocol.dataclass_converter import unpack_dataclasses
-from magicnet.protocol.typehint_marshal import typehint_marshal
 from magicnet.util.messenger import MessengerNode, StandardEvents
+from magicnet.util.typechecking.dataclass_converter import unpack_dataclasses
+from magicnet.util.typechecking.field_signature import FieldSignature
+from magicnet.util.typechecking.typehint_marshal import typehint_marshal
 
 if TYPE_CHECKING:
     from magicnet.core.network_manager import NetworkManager
@@ -50,7 +51,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     controller: "NetworkManager" = dataclasses.field(repr=False)
 
     oid: int = 0
-    type: ClassVar[int] = 0
+    otype: ClassVar[int] = 0
     owner: int = 0
     zone: int = 0
 
@@ -87,7 +88,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
 
     @classmethod
     def set_type(cls, otype: int) -> None:
-        cls.type = otype
+        cls.otype = otype
 
     @classmethod
     def marshal_fields(cls) -> dict:
@@ -114,7 +115,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
         ]
 
     @classmethod
-    def add_foreign_class(cls, foreign: Type["NetworkObject"]) -> None:
+    def add_foreign_class(cls, foreign: type["NetworkObject"]) -> None:  # noqa: UP006
         cls.foreign_field_data[foreign.object_role] = foreign.field_data
 
     @classmethod
@@ -180,7 +181,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
         if field is None:
             self.emit(
                 StandardEvents.WARNING,
-                f"Attempt to call unknown field {field_id} on class {self.type}!",
+                f"Attempt to call unknown field {field_id} on class {self.otype}!",
             )
             self.emit(
                 MNEvents.BAD_NETWORK_OBJECT_CALL,
@@ -206,7 +207,13 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             self.emit(
                 MNEvents.BAD_NETWORK_OBJECT_CALL,
-                dict(obj=self, handle=handle, field_id=field_id, reason="bad-args", msg=str(e)),
+                dict(
+                    obj=self,
+                    handle=handle,
+                    field_id=field_id,
+                    reason="bad-args",
+                    msg=str(e),
+                ),
             )
             return
 

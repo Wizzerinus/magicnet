@@ -9,9 +9,9 @@ from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage
 from magicnet.core.transport_handler import TransportMiddleware
-from magicnet.protocol.network_typechecker import check_type
 from magicnet.protocol.processor_base import MessageProcessor
 from magicnet.util.messenger import StandardEvents
+from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 
 def create_validator(input_type: type) -> Callable[[Any], tuple[bool, Any]]:
