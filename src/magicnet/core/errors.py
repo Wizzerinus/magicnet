@@ -43,6 +43,11 @@ class NoneRequired(DataValidationError):
         super().__init__(f"Expected None, got {value}")
 
 
+class TupleOrListRequired(DataValidationError):
+    def __init__(self, value):
+        super().__init__(f"Expected a tuple or a list, got {value}")
+
+
 class UnionValidationFailed(DataValidationError):
     def __init__(self, value, hint):
         super().__init__(f"Union validation error: expected {hint}, got {value}")
@@ -73,6 +78,11 @@ class NoValueProvided(DataValidationError):
 class TooManyArguments(DataValidationError):
     def __init__(self, args: list, signature_count: int):
         super().__init__(f"Too many arguments: {args} (expected {signature_count})")
+
+
+class ExcessDataclassValue(DataValidationError):
+    def __init__(self, value):
+        super().__init__(f"Excess dataclass value: {value}")
 
 
 class DependencyMissing(NetworkConfigurationError):

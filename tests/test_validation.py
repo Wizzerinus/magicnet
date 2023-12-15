@@ -1,5 +1,9 @@
+import dataclasses
+
+from helpers import assert_raises
 from magicnet.core.errors import DataValidationError
 from magicnet.protocol import network_types
+from magicnet.protocol.dataclass_converter import convert_object
 from magicnet.protocol.network_typechecker import check_type
 
 
@@ -7,13 +11,9 @@ def check_validator(validator, good, bad):
     for good_value in good:
         check_type(good_value, validator)
     for bad_value in bad:
-        try:
+        msg = f"Validation succeeded but should have failed: {bad_value}"
+        with assert_raises(DataValidationError, msg):
             check_type(bad_value, validator)
-        except DataValidationError:
-            pass
-        else:
-            msg = f"Validation succeeded but should have failed: {bad_value}"
-            assert False, msg
 
 
 def test_validation_base():
@@ -81,3 +81,44 @@ def test_validation_tuple():
     check_validator(
         tuple[int, str, ...], [(1,), (1, ""), (1, "", "")], [(1.1, ""), ("", 1)]
     )
+
+
+def test_validation_dataclass():
+    @dataclasses.dataclass
+    class A:
+        normal_field: int
+        default_field: int = 0
+        mutable_field: list[int] = dataclasses.field(default_factory=list)
+
+    obj1 = A(1)
+    obj2 = A(1, 2)
+    obj3 = A(1, 2, [1, 2, 3])
+    for obj in (obj1, obj2, obj3):
+        assert convert_object(A, dataclasses.astuple(obj)) == obj
+
+    bad = [
+        (),
+        ("",),
+        (1, 2, 3),
+        (1, 2, [1, 2, 3], 4),
+    ]
+    for value in bad:
+        msg = f"Validation succeeded but should have failed: {value}"
+        with assert_raises(DataValidationError, msg):
+            convert_object(A, value)
+
+
+def test_recursive_conversion():
+    @dataclasses.dataclass
+    class A:
+        value: int
+
+    assert convert_object(A, (1,)) == A(1)
+    assert convert_object(list[A], [(1,), A(2)]) == [A(1), A(2)]
+    assert convert_object(dict[str, A], {"a": (1,)}) == {"a": A(1)}
+
+    msg = "Validation succeeded but should have failed: (1, 2)"
+    with assert_raises(DataValidationError, msg):
+        convert_object(list[A], [(1, 2)])
+
+    assert convert_object(tuple, (1, 2)) == (1, 2)

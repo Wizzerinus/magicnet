@@ -194,7 +194,8 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             return
 
-        if e := field.validate_arguments(arguments):
+        arguments, e = field.validate_arguments(arguments)
+        if e:
             self.emit(
                 StandardEvents.WARNING, f"Arguments for {field.name} do not match: {e}"
             )

@@ -8,6 +8,7 @@ from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNMathTargets
 from magicnet.protocol import network_types
+from magicnet.protocol.dataclass_converter import convert_object
 from magicnet.protocol.network_typechecker import check_type
 from magicnet.util.messenger import MessengerNode
 
@@ -37,7 +38,12 @@ class SignatureItem:
             typehint = network_types.hashable
 
         # raises if something is wrong
-        check_type(value, typehint)
+        if dataclasses.is_dataclass(self.typehint) and isinstance(value, tuple):
+            value = convert_object(self.typehint, value)
+        else:
+            check_type(value, typehint)
+
+        return value
 
     @classmethod
     def convert_annotation(cls, annotation) -> type:
@@ -98,6 +104,7 @@ class FieldSignature:
         self.name = name
 
     def validate_arguments(self, args: list, *, on_call_site: bool = False):
+        parameters = []
         try:
             variadic_param: SignatureItem | None = None
             for i in range(max(len(args), len(self.signature))):
@@ -108,13 +115,14 @@ class FieldSignature:
                 if signature is None:
                     raise errors.TooManyArguments(args, len(self.signature))
                 # raises if something is wrong
-                signature.validate_value(value, on_call_site=on_call_site)
+                value = signature.validate_value(value, on_call_site=on_call_site)
+                parameters.append(value)
                 if signature.is_variadic:
                     variadic_param = signature
         except errors.DataValidationError as e:
-            return e
+            return None, e
 
-        return None
+        return parameters, None
 
 
 class NetworkField(FieldSignature):
