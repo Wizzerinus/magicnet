@@ -29,6 +29,8 @@ class SignatureItem:
 
     def validate_value(self, value, *, on_call_site: bool = False):
         if value is NoValueProvided:
+            if self.is_variadic:
+                return NoValueProvided
             if self.default_value is inspect.Parameter.empty:
                 raise errors.NoValueProvided(self.name)
             value = self.default_value
@@ -114,7 +116,8 @@ class FieldSignature:
                     raise errors.TooManyArguments(args, len(self.signature))
                 # raises if something is wrong
                 value = signature.validate_value(value, on_call_site=on_call_site)
-                parameters.append(value)
+                if value is not NoValueProvided:
+                    parameters.append(value)
                 if signature.is_variadic:
                     variadic_param = signature
         except errors.DataValidationError as e:
