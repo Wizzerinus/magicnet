@@ -8,6 +8,7 @@ I may extract this into a separate module later.
 
 __all__ = ["check_type"]
 
+import dataclasses
 from types import UnionType
 from typing import (
     Annotated,
@@ -20,6 +21,12 @@ from typing import (
 
 from magicnet.core import errors
 from magicnet.protocol import network_types
+
+
+@dataclasses.dataclass
+class MemoryObject:
+    visited: set = dataclasses.field(default_factory=set)
+    weak_visited: set = dataclasses.field(default_factory=set)
 
 
 def check_dict(value, hint, memory):
@@ -67,9 +74,13 @@ def check_tuple(value, hint, memory):
 
 
 def check_union(value, hint, memory):
+    key = id(value)
+    if key in memory.weak_visited:
+        raise errors.RecursiveTypeProvided(value)
+    memory.weak_visited.add(key)
     for field in get_args(hint):
         try:
-            check_type(value, field, memory)
+            check_type(value, field, memory, ignore_memory=True)
         except errors.DataValidationError:
             pass
         else:
@@ -102,7 +113,13 @@ def check_predicates(value, metadata):
             raise errors.PredicateValidationFailed(value, predicate)
 
 
-def check_type(value, hint: type[network_types.hashable], memory: dict | None = None):
+def check_type(
+    value,
+    hint: type[network_types.hashable],
+    memory: dict | None = None,
+    *,
+    ignore_memory: bool = False,
+):
     origin_type = get_origin(hint) or hint
     meta = None
     if origin_type is Annotated:
@@ -112,8 +129,17 @@ def check_type(value, hint: type[network_types.hashable], memory: dict | None = 
         if meta is not None:
             check_predicates(value, meta)
         return
+
+    if memory is None:
+        memory = MemoryObject()
+    if origin_type in MUTABLE_TYPES and not ignore_memory:
+        key = id(value)
+        if key in memory.visited:
+            raise errors.RecursiveTypeProvided(value)
+        memory.visited.add(key)
+
     if isinstance(hint, ForwardRef):
-        check_type(value, hint.__forward_value__, memory)
+        check_type(value, hint.__forward_value__, memory, ignore_memory=True)
         return
 
     if origin_type not in SKIP_ISINSTANCE and not isinstance(value, origin_type):
@@ -125,13 +151,6 @@ def check_type(value, hint: type[network_types.hashable], memory: dict | None = 
             pass
         else:
             raise errors.TypeComparisonFailed(origin_type, value)
-
-    memory = memory or {}
-    if origin_type in MUTABLE_TYPES:
-        key = id(value)
-        if key in memory:
-            raise errors.RecursiveTypeProvided(value)
-        memory[key] = 1
 
     if origin_type in VALIDATORS:
         VALIDATORS[origin_type](value, hint, memory)
