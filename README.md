@@ -192,18 +192,26 @@ This is the list of all components I would want to implement, but not all of the
 The components that can be implemented easily but are not in the standard library
 due to being opinionated are marked as domain-specific.
 
-### Application Layer
+### Object API
 
-* **Message API** - fully functional
-* **Object API** - in progress, functional but would want to add more features
-* **Data persistence** - not implemented
-  * Most likely, there will be two batteries to persist object state, one using MongoDB,
-    and another one using SQLAlchemy.
+* **Generation and removal of objects** - implemented
+* **Network fields** - implemented
+* **Field type validation** - implemented
+* **Passing structs as arguments** - implemented
+* **RAM persistence of fields** - partially implemented
+  * Right now all fields have RAM persistence enabled, and it cannot be configured.
+    Fixing this is probably quite annoying due to how the initial generation message is sent
+    and might require a protocol bump.
+* **Database persistence** - not implemented
+  * Most likely, I will implement three backends (SQL, MongoDB, dbm for local development).
+* **Object API routing** - not implemented
+  * Zone-based message routing is planned (each client "sees" a set of zones,
+    and each object is in exactly one zone). The API already includes the
+    zone numbers on all objects, but they're currently not used.
 
 ### Message and Connection Layer
 
 * **Handshake** - fully functional
-* **Object management** - in progress, see above
 * **Shared parameters** - fully functional
   * Includes a way to save data on a connection that is shared between both sides.
     Note that there is not a built in security protocol for this. 
@@ -218,6 +226,7 @@ due to being opinionated are marked as domain-specific.
   * As reconnection cannot be implemented on some stacks like TCP,
     it really is just "making a new connection to the same server without losing state".
     This is application logic-dependent and may be easier than I think it is.
+* **Custom messages** - fully implemented
 
 ### Network Layer
 
@@ -251,10 +260,6 @@ other event loops made by other libraries).
   * Requires the use of a custom event handler (`MNMathTargets.FIELD_CALL_ALLOWED`)
 * **Message API routing** - domain-specific 
   * Requires the use of a custom TransportManager or HandleFilter
-* **Object API routing** - not implemented
-  * Zone-based message routing is planned (each client "sees" a set of zones,
-    and each object is in exactly one zone). The API already includes the
-    zone numbers on all objects, but they're currently not used.
 * **Message-level security** - not implemented / domain-specific
   * This includes things like "Reject MOTD from the clients". Because actually,
     currently the server will respond to the MOTD, which can be used to extract
@@ -323,3 +328,45 @@ with the entire game client and server code remaining intact!
   it will be harder to do efficiently without callback hell (synchronous database handlers 
   tend to be quite slow). I do not currently have a solution in mind,
   but will implement one if a reasonably good one is suggested.
+
+---
+
+## Comparison with similar libraries
+
+### gRPC
+
+gRPC is a very popular library for building networked applications. The scope of gRPC is
+quite different from MagicNet, however:
+
+* Any message in gRPC is sent from the client, which will then expect a response.
+  This means the library is not suitable for real-time applications, which will often
+  send messages from the server to the client, and messages don't have a response
+  (which can be simulated by sending a message back).
+* For gRPC language compatibility is very important. While the protocol of MagicNet
+  is language-agnostic, the library itself is written in Python and will require additional work
+  to be used in other languages.
+* gRPC's protocol has to be configured through Protobuf. While this is important for language
+  compatibility, it is less intuitive than using typehints.
+
+### Astron
+
+Astron is a library for building real-time applications, originally made for Disney's Toontown Online.
+MagicNet is inspired by Astron in many ways, as I have worked with Astron for a long time.
+(In fact, the reason why MagicNet was created is because there was not a powerful enough networking
+library that worked with Panda3D!) That said there are some key differences:
+
+* The core of Astron is written in C++, while MagicNet is written in Python.
+  This means that Astron is much faster, but also much harder to use.
+  (This can be somewhat remedied by rewriting the core of the library in a modern language, which is planned.)
+* Astron currently doesn't have a free (as in, not proprietary) client implementation.
+  The CMU protocol implemented in Panda3D does not incorporate many of the features of the Astron protocol,
+  such as Distributed objects. In addition, the Panda3D implementation only really works
+  with the event loop of that engine, which means AsyncIO cannot be used easily.
+* Adding custom message codes to most Astron implementations is relatively difficult due to the
+  way the software is designed. MagicNet is designed to be as flexible as possible in this regard.
+* The distributed fields have to be configured through DC files, which are not very intuitive.
+  MagicNet uses typehints instead, which are much easier to use.
+
+In general Astron is quite archaic and tends itself to be used in a very specific way
+(mostly creating MMORPG games) due to the complexity of the server component, although it's quite good at that.
+MagicNet is better suitable for smaller projects, and is much easier to use.
