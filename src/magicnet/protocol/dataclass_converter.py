@@ -1,4 +1,4 @@
-__all__ = ["convert_object"]
+__all__ = ["convert_object", "unpack_dataclasses"]
 
 import dataclasses
 import itertools
@@ -30,6 +30,7 @@ def convert_fields(fields: tuple[dataclasses.Field, ...], data: tuple) -> list:
             field_type = network_types.hashable
         else:
             field_type = field.type
+        item = convert_object(field_type, item)
         check_type(item, field_type)
 
         output.append(item)
@@ -63,4 +64,14 @@ def convert_object(hint: type[T], data: Any) -> T:
             raise errors.TupleOrListRequired(data)
         return convert_dataclass(origin_type, tuple(data))
 
+    return data
+
+
+def unpack_dataclasses(data):
+    if isinstance(data, tuple) or isinstance(data, list):
+        return tuple(unpack_dataclasses(item) for item in data)
+    if isinstance(data, dict):
+        return {k: unpack_dataclasses(v) for k, v in data.items()}
+    if dataclasses.is_dataclass(data):
+        return tuple(dataclasses.astuple(data))
     return data

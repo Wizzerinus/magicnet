@@ -52,7 +52,7 @@ class MsgHello(MessageProcessor):
 
 class MsgDisconnect(MessageProcessor):
     REQUIRES_HELLO = False
-    arg_type = tuple[network_types.uint8, network_types.bs64 | None]
+    arg_type = tuple[network_types.uint8, network_types.s64 | None]
 
     DISCONNECT_REASONS = {
         StandardDCReasons.HELLO_MULTIPLE: "HELLO message sent multiple times!",

@@ -30,18 +30,18 @@ class SignatureItem:
         return desc
 
     def validate_value(self, value, *, on_call_site: bool = False):
-        if value is NoValueProvided and self.default_value is inspect.Parameter.empty:
-            raise errors.NoValueProvided(self.name)
+        if value is NoValueProvided:
+            if self.default_value is inspect.Parameter.empty:
+                raise errors.NoValueProvided(self.name)
+            value = self.default_value
 
         typehint = self.typehint
         if typehint is Any and on_call_site:
             typehint = network_types.hashable
 
         # raises if something is wrong
-        if dataclasses.is_dataclass(self.typehint) and isinstance(value, tuple):
-            value = convert_object(self.typehint, value)
-        else:
-            check_type(value, typehint)
+        value = convert_object(self.typehint, value)
+        check_type(value, typehint)
 
         return value
 

@@ -122,3 +122,9 @@ def test_recursive_conversion():
         convert_object(list[A], [(1, 2)])
 
     assert convert_object(tuple, (1, 2)) == (1, 2)
+
+    @dataclasses.dataclass
+    class B:
+        a: A
+
+    assert convert_object(B, ((1,),)) == B(A(1))

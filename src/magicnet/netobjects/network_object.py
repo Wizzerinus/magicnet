@@ -11,6 +11,7 @@ from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNEvents
 from magicnet.netobjects.network_field import FieldSignature, NetworkField
 from magicnet.netobjects.network_object_meta import NetworkObjectMeta
+from magicnet.protocol.dataclass_converter import unpack_dataclasses
 from magicnet.protocol.typehint_marshal import typehint_marshal
 from magicnet.util.messenger import MessengerNode, StandardEvents
 
@@ -205,7 +206,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             self.emit(
                 MNEvents.BAD_NETWORK_OBJECT_CALL,
-                dict(obj=self, handle=handle, field_id=field_id, reason="bad-args"),
+                dict(obj=self, handle=handle, field_id=field_id, reason="bad-args", msg=str(e)),
             )
             return
 
@@ -234,6 +235,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
         return self.message_index[message]
 
     def send_message(self, message: str, args: list | tuple = ()) -> None:
+        args = unpack_dataclasses(args)
         role_id, field_id = self.resolve_field(message)
         self.loaded_params[(role_id, field_id)] = list(args)
         if self.object_state == ObjectState.GENERATED:
