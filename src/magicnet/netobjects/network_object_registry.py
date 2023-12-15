@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class NetworkObjectRegistry(MessengerNode):
     added_classes: list[type[NetworkObject]] = dataclasses.field(default_factory=list)
+    foreign_classes: list[type[NetworkObject]] = dataclasses.field(default_factory=list)
     classes: dict[int, type[NetworkObject]] = dataclasses.field(default_factory=dict)
     object_name_to_id: dict[str, int] = dataclasses.field(default_factory=dict)
     initialized: bool = False
@@ -33,11 +34,16 @@ class NetworkObjectRegistry(MessengerNode):
         elif self.manager.object_signature_filenames:
             self.load_from_filenames()
 
-    def register_object(self, object_type: type[NetworkObject]):
+    def register_object(
+        self, object_type: type[NetworkObject], *, foreign: bool = False
+    ):
         if self.initialized:
             raise errors.RegistryObjectAfterInitialization(object_type.__name__)
 
-        self.added_classes.append(object_type)
+        if not foreign:
+            self.added_classes.append(object_type)
+        else:
+            self.foreign_classes.append(object_type)
 
     def marshal_classes(self) -> dict[str, Any]:
         if self.initialized:
@@ -64,9 +70,12 @@ class NetworkObjectRegistry(MessengerNode):
 
         self.initialized = True
         added_classes = self.added_classes[:]
+        foreign_classes = self.foreign_classes[:]
+
         all_existing_class_names = {clazz.network_name for clazz in added_classes}
         all_class_names = {name for marshal in marshalled_contents for name in marshal}
-        for foreign_name in all_existing_class_names - all_class_names:
+        all_class_names |= {clazz.network_name for clazz in foreign_classes}
+        for foreign_name in all_class_names - all_existing_class_names:
             clazz = ForeignNetworkObject.create_subclass(foreign_name)
             added_classes.append(clazz)
         classes = sorted(added_classes, key=lambda t: t.network_name)
@@ -74,9 +83,15 @@ class NetworkObjectRegistry(MessengerNode):
             self.classes[idx] = clazz
             self.object_name_to_id[clazz.network_name] = idx
             clazz.set_type(idx)
+
         self.added_classes = []
         for item in marshalled_contents:
             self.unmarshal_foreign_classes(item)
+        for clazz in foreign_classes:
+            local_class = self.classes.get(self.object_name_to_id[clazz.network_name])
+            if local_class:
+                local_class.add_foreign_class(clazz)
+        self.foreign_classes = []
         for clazz in self.classes.values():
             clazz.finalize_fields()
 

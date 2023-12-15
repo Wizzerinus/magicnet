@@ -4,7 +4,7 @@ import abc
 import dataclasses
 from collections import defaultdict
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Type
 
 from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
@@ -111,6 +111,10 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             typehint_marshal.marshal_to_signature(field)
             for field in signature.signatures
         ]
+
+    @classmethod
+    def add_foreign_class(cls, foreign: Type["NetworkObject"]) -> None:
+        cls.foreign_field_data[foreign.object_role] = foreign.field_data
 
     @classmethod
     def finalize_fields(cls) -> None:
