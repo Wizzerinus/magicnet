@@ -15,8 +15,7 @@ from magicnet.core.transport_manager import TransportParameters
 T = TypeVar("T", bound="NetworkTester")
 
 
-@dataclasses.dataclass
-class NetworkTester:
+class NetworkTester(abc.ABC):
     @abc.abstractmethod
     def start(self):
         pass
@@ -61,6 +60,7 @@ class TwoNodeNetworkTester(NetworkTester):
             transport_type=EverywhereTransportManager,
             transport_params=("server", transport),
             motd="An example native host",
+            client_repository=64,
         )
         server.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "server"))
         client = NetworkManager.create_root(
@@ -78,3 +78,63 @@ class TwoNodeNetworkTester(NetworkTester):
     def enable_debug(self):
         self.server.create_child(LoggerNode, prefix="test.server")
         self.client.create_child(LoggerNode, prefix="test.client")
+
+
+@dataclasses.dataclass
+class FlexibleNetworkTester(NetworkTester, abc.ABC):
+    server: NetworkManager
+    clients: list[NetworkManager] = dataclasses.field(default_factory=list)
+    debug: bool = False
+
+    middlewares = [MessageValidatorMiddleware]
+    encoder = MsgpackEncoder()
+    transport = {
+        "client": {
+            "server": TransportParameters(
+                encoder, SingleAppTransport, None, middlewares
+            )
+        }
+    }
+
+    @classmethod
+    def create(cls, *args):
+        def raise_err(name, msg):
+            raise RuntimeError(f"{name} disconnected: {msg}")
+
+        server = NetworkManager.create_root(
+            transport_type=EverywhereTransportManager,
+            transport_params=("server", cls.transport),
+            motd="An example native host",
+            client_repository=64,
+        )
+        server.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "server"))
+        return cls(server=server)
+
+    def start(self):
+        self.server.open_server(client=())
+
+    @abc.abstractmethod
+    def prepare_client(self, client: NetworkManager):
+        pass
+
+    def make_client(self):
+        def raise_err(name, msg):
+            raise RuntimeError(f"{name} disconnected: {msg}")
+
+        client = NetworkManager.create_root(
+            transport_type=EverywhereTransportManager,
+            transport_params=("client", self.transport),
+        )
+        client.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "client"))
+        if self.debug:
+            client.create_child(LoggerNode, prefix=f"test.client-{len(self.clients)}")
+        self.clients.append(client)
+        self.prepare_client(client)
+        client.open_connection(server=[self.server])
+        return client
+
+    def enable_debug(self):
+        self.server.create_child(LoggerNode, prefix="test.server")
+        self.debug = True
+        for idx, client in enumerate(self.clients):
+            client.create_child(LoggerNode, prefix=f"test.client-{idx}")

@@ -13,7 +13,7 @@ from magicnet.netobjects.network_field import NetworkField
 from magicnet.netobjects.network_object_meta import NetworkObjectMeta
 from magicnet.util.messenger import MessengerNode, StandardEvents
 from magicnet.util.typechecking.dataclass_converter import unpack_dataclasses
-from magicnet.util.typechecking.field_signature import FieldSignature
+from magicnet.util.typechecking.field_signature import FieldSignature, SignatureFlags
 from magicnet.util.typechecking.typehint_marshal import typehint_marshal
 
 if TYPE_CHECKING:
@@ -82,6 +82,25 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     message_index: ClassVar[dict[str, tuple[int, int]]] = None
 
     object_state: ObjectState = ObjectState.INVALID
+
+    def get_field_signature(self, role: int, field: int) -> FieldSignature | None:
+        if role == self.object_role:
+            if field >= len(self.field_data):
+                return None
+            return self.field_data[field]
+
+        if role not in self.foreign_field_data:
+            return None
+        foreign_list = self.foreign_field_data[role]
+        if field >= len(foreign_list):
+            return None
+        return foreign_list[field]
+
+    def persist_field_data(self, role: int, field: int, params: list):
+        signature = self.get_field_signature(role, field)
+        if not signature or not (signature.flags & SignatureFlags.PERSIST_IN_RAM):
+            return
+        self.loaded_params[(role, field)] = params
 
     def __post_init__(self):
         self.parent = self.controller.object_manager
@@ -172,9 +191,9 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     def call_field(
         self, handle: ConnectionHandle, role_id: int, field_id: int, arguments: list
     ):
+        self.persist_field_data(role_id, field_id, arguments)
         if role_id != self.object_role:
             # calling a remote field, we only save the parameter
-            self.loaded_params[(role_id, field_id)] = arguments
             return
 
         field = self.resolve_callback_name(field_id)
@@ -217,7 +236,6 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             return
 
-        self.loaded_params[(role_id, field_id)] = arguments
         field.call(self, arguments)
 
     def request_generate(self, owner: int = 0) -> None:
@@ -244,7 +262,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     def send_message(self, message: str, args: list | tuple = ()) -> None:
         args = unpack_dataclasses(args)
         role_id, field_id = self.resolve_field(message)
-        self.loaded_params[(role_id, field_id)] = list(args)
+        self.persist_field_data(role_id, field_id, list(args))
         if self.object_state == ObjectState.GENERATED:
             self.manager.object_manager.request_call_field(
                 self, role_id, field_id, args

@@ -1,8 +1,9 @@
-__all__ = ["SignatureItem", "FieldSignature"]
+__all__ = ["SignatureItem", "FieldSignature", "SignatureFlags"]
 
 
 import dataclasses
 import inspect
+from enum import IntFlag, auto
 from typing import Any, Union
 
 from magicnet.core import errors
@@ -12,6 +13,10 @@ from magicnet.util.typechecking.magicnet_typechecker import check_type
 
 NoValueProvided = object()
 """Sentinel for data validation when there's no argument in the slot"""
+
+
+class SignatureFlags(IntFlag):
+    PERSIST_IN_RAM = auto()
 
 
 @dataclasses.dataclass
@@ -90,15 +95,18 @@ class SignatureItem:
 class FieldSignature:
     signature: list[SignatureItem] = None
     name: str = None
+    flags: SignatureFlags = SignatureFlags(0)
 
     def __repr__(self):
         return f"{self.name}{self.signature}"
 
-    def set_from_callable(self, field: callable):
+    def set_from_callable(self, field: callable, flags: SignatureFlags):
         self.signature = SignatureItem.from_signature(inspect.signature(field))
+        self.flags = flags
 
-    def set_from_list(self, data: list[SignatureItem]):
+    def set_from_list(self, data: list[SignatureItem], flags: int):
         self.signature = data
+        self.flags = SignatureFlags(flags)
 
     def set_name(self, name: str):
         self.name = name

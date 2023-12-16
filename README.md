@@ -198,10 +198,7 @@ due to being opinionated are marked as domain-specific.
 * **Network fields** - implemented
 * **Field type validation** - implemented
 * **Passing structs as arguments** - implemented
-* **RAM persistence of fields** - partially implemented
-  * Right now all fields have RAM persistence enabled, and it cannot be configured.
-    Fixing this is probably quite annoying due to how the initial generation message is sent
-    and might require a protocol bump.
+* **RAM persistence of fields** - implemented
 * **Database persistence** - not implemented
   * Most likely, I will implement three backends (SQL, MongoDB, dbm for local development).
 * **Object API routing** - not implemented

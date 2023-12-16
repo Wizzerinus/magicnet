@@ -163,13 +163,14 @@ class TypehintMarshal:
         items = [self.marshal_to_item(x) for x in marshal["f"]]
         fs = FieldSignature()
         fs.set_name(marshal["n"])
-        fs.set_from_list(items)
+        fs.set_from_list(items, marshal["a"])
         return fs
 
     def signature_to_marshal(self, signature: FieldSignature):
         return {
             "f": [self.item_to_marshal(x) for x in signature.signature],
             "n": signature.name,
+            "a": int(signature.flags),
         }
 
 

@@ -3,6 +3,7 @@ from typing import Any
 
 from magicnet.netobjects.network_field import NetworkField
 from magicnet.protocol import network_types
+from magicnet.util.typechecking.field_signature import SignatureFlags
 from magicnet.util.typechecking.typehint_marshal import typehint_marshal
 
 
@@ -68,3 +69,15 @@ def test_annotated():
     assert err is None
     _, err = signature.validate_arguments([1, 2, 3])
     assert err is None
+
+    assert signature.flags == SignatureFlags.PERSIST_IN_RAM
+
+    @NetworkField(ram_persist=False)
+    def some_field():
+        pass
+
+    marshalled = typehint_marshal.signature_to_marshal(some_field)
+    jsonned = json.dumps(marshalled)
+    unjsonned = json.loads(jsonned)
+    signature = typehint_marshal.marshal_to_signature(unjsonned)
+    assert signature.flags == SignatureFlags(0)
