@@ -87,14 +87,28 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
     debug: bool = False
 
     middlewares = [MessageValidatorMiddleware]
+    server_middlewares = [MessageValidatorMiddleware]
     encoder = MsgpackEncoder()
-    transport = {
-        "client": {
-            "server": TransportParameters(
-                encoder, SingleAppTransport, None, middlewares
-            )
+
+    @classmethod
+    def transport(cls):
+        return {
+            "client": {
+                "server": TransportParameters(
+                    cls.encoder, SingleAppTransport, None, cls.middlewares
+                )
+            }
         }
-    }
+
+    @classmethod
+    def server_transport(cls):
+        return {
+            "client": {
+                "server": TransportParameters(
+                    cls.encoder, SingleAppTransport, None, cls.server_middlewares
+                )
+            }
+        }
 
     @classmethod
     def create(cls, *args):
@@ -103,7 +117,7 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
 
         server = NetworkManager.create_root(
             transport_type=EverywhereTransportManager,
-            transport_params=("server", cls.transport),
+            transport_params=("server", cls.server_transport()),
             motd="An example native host",
             client_repository=64,
         )
@@ -117,13 +131,13 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
     def prepare_client(self, client: NetworkManager):
         pass
 
-    def make_client(self):
+    def make_client(self) -> NetworkManager:
         def raise_err(name, msg):
             raise RuntimeError(f"{name} disconnected: {msg}")
 
         client = NetworkManager.create_root(
             transport_type=EverywhereTransportManager,
-            transport_params=("client", self.transport),
+            transport_params=("client", self.transport()),
         )
         client.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "client"))
         if self.debug:

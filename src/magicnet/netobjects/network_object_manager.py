@@ -61,9 +61,9 @@ class NetworkObjectManager(MessengerNode):
                 msg.f_destination = handle
             self.manager.send_message(msg)
 
-    def get_visible_objects(self, handle: ConnectionHandle):
+    def get_visible_objects(self, handle: ConnectionHandle) -> list[NetworkObject]:
         return self.listener.calculate(
-            MNMathTargets.VISIBLE_OBJECTS, self.managed_objects, handle
+            MNMathTargets.VISIBLE_OBJECTS, list(self.managed_objects.values()), handle
         )
 
     def initialize_object(self, obj_id: int):
@@ -126,8 +126,8 @@ class NetworkObjectManager(MessengerNode):
 
         obj.oid = self.make_oid() + (self.manager.client_repository << 32)
         obj.owner = owner or self.manager.client_repository
-        self.send_network_object_generate(obj, obj.get_loaded_params())
         self.add_network_object(obj)
+        self.send_network_object_generate(obj, obj.get_loaded_params())
         obj.object_state = ObjectState.GENERATING
         self.initialize_object(obj.oid)
 

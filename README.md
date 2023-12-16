@@ -201,10 +201,10 @@ due to being opinionated are marked as domain-specific.
 * **RAM persistence of fields** - implemented
 * **Database persistence** - not implemented
   * Most likely, I will implement three backends (SQL, MongoDB, dbm for local development).
-* **Object API routing** - not implemented
-  * Zone-based message routing is planned (each client "sees" a set of zones,
-    and each object is in exactly one zone). The API already includes the
-    zone numbers on all objects, but they're currently not used.
+* **Object API routing** - implemented
+  * Zone-based message routing is currently implemented (each client "sees" a set of zones,
+    and each object is in exactly one zone). The set of visible zones can be configured
+    through shared parameters (i.e., on handle-to-handle basis).
 
 ### Message and Connection Layer
 

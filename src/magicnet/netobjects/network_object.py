@@ -238,7 +238,9 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
 
         field.call(self, arguments)
 
-    def request_generate(self, owner: int = 0) -> None:
+    def request_generate(self, *, zone: int = None, owner: int = 0) -> None:
+        if zone is not None:
+            self.zone = zone
         if self.manager.client_repository is not None:
             # We have authority, we can create any objects
             # or at least try to do it

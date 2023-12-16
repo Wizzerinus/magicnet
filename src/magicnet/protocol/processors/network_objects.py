@@ -151,7 +151,7 @@ class MsgRequestVisible(MessageProcessor):
 
     def invoke(self, message: NetMessage):
         all_objects = self.manager.object_manager.get_visible_objects(message.sent_from)
-        for obj in all_objects.values():
+        for obj in all_objects:
             params = obj.get_loaded_params()
             self.manager.object_manager.send_network_object_generate(
                 obj, params, message.sent_from
