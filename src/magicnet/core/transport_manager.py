@@ -8,6 +8,7 @@ from collections.abc import Collection, Iterable
 from typing import TypeVar, cast
 
 from magicnet.core import errors
+from magicnet.core.connection import ConnectionHandle
 from magicnet.core.handle_filter import HandleFilter
 from magicnet.core.net_message import NetMessage
 from magicnet.core.protocol_encoder import ProtocolEncoder
@@ -166,3 +167,9 @@ class TransportManager(MessengerNode, abc.ABC):
     def shutdown_connections(self):
         for transport in self.transports.values():
             transport.shutdown()
+
+    def get_handle(self, remote_role: str) -> ConnectionHandle | None:
+        if remote_role not in self.transports:
+            raise errors.UnknownRole(remote_role)
+
+        return self.transports[remote_role].get_handle()

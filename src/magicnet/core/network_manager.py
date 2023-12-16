@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import Generic, TypeVar
 
 from magicnet.core import errors
+from magicnet.core.connection import ConnectionHandle
 from magicnet.core.datagram_processor import DatagramProcessor
 from magicnet.core.net_globals import MNEvents
 from magicnet.core.net_message import NetMessage, client_repo_range, standard_range
@@ -173,3 +174,13 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
         msg = NetMessage(StandardMessageTypes.SHUTDOWN)
         self.send_message(msg)
         self.transport.shutdown_connections()
+
+    def get_handle(self, remote_role: str) -> ConnectionHandle | None:
+        """
+        Returns a handle identifying connection with a certain client role.
+        If there are multiple connections to clients with that role,
+        can return any of them, and is intended to be only used
+        in scenarios where there is supposed to be only one such handle.
+        """
+
+        return self.transport.get_handle(remote_role)

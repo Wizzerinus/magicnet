@@ -182,3 +182,9 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def shutdown(self):
         for handle in list(self.connections.values()):
             handle.destroy()
+
+    def get_handle(self) -> ConnectionHandle | None:
+        try:
+            return next(iter(self.connections.values()))
+        except StopIteration:
+            return None
