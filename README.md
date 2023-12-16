@@ -365,3 +365,4 @@ library that worked with Panda3D!) That said there are some key differences:
 In general Astron is quite archaic and tends itself to be used in a very specific way
 (mostly creating MMORPG games) due to the complexity of the server component, although it's quite good at that.
 MagicNet is better suitable for smaller projects, and is much easier to use.
+
