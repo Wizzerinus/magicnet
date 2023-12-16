@@ -17,24 +17,28 @@ class SingleAppTransport(TransportHandler):
     launched in the same process. This can be used to simplify local development.
     """
 
-    other_transport: "SingleAppTransport" = None
+    remote_nodes: list["SingleAppTransport"] = dataclasses.field(default_factory=list)
     handle_map: dict[uuid4, ConnectionHandle] = dataclasses.field(default_factory=dict)
 
     def send(self, connection: ConnectionHandle, dg: bytes) -> None:
-        if not self.other_transport:
-            self.emit(StandardEvents.ERROR, "The opposite transport isn't defined!")
-            return
+        for node in self.remote_nodes:
+            handle_inverse = node.handle_map.get(connection.connection_data)
+            if handle_inverse:
+                node.datagram_received(handle_inverse, dg)
+                return
 
-        handle_inverse = self.other_transport.handle_map[connection.connection_data]
-        self.other_transport.datagram_received(handle_inverse, dg)
+        self.emit(StandardEvents.ERROR, "The opposite transport isn't defined!")
+        return
 
     def connect(self, connection_data: NetworkManager) -> None:
-        transport = connection_data.transport.transports[self.manager.role]
-        self.other_transport = cast(SingleAppTransport, transport)
-        self.other_transport.other_transport = self
+        transport = cast(
+            SingleAppTransport, connection_data.transport.transports[self.manager.role]
+        )
+        self.remote_nodes.append(transport)
+        transport.remote_nodes.append(self)
         handle = ConnectionHandle(self, uuid4())
         self.handle_map[handle.connection_data] = handle
-        self.other_transport.handle_new_connection(handle)
+        transport.handle_new_connection(handle)
 
     def handle_new_connection(self, handle: ConnectionHandle):
         server_handle = ConnectionHandle(self, handle.connection_data)
