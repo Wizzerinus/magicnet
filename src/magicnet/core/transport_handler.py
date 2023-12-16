@@ -24,8 +24,8 @@ from magicnet.util.messenger import MessengerNode, StandardEvents
 if TYPE_CHECKING:
     from magicnet.core.network_manager import NetworkManager
 
-BytesOperator = Callable[[bytes], bytes]
-MessageOperator = Callable[[NetMessage | None], NetMessage | None]
+BytesOperator = Callable[[bytes, ConnectionHandle], bytes | None] | None
+MessageOperator = Callable[[NetMessage, ConnectionHandle], NetMessage | None] | None
 ManagerT = TypeVar("ManagerT", bound="NetworkManager")
 
 
@@ -46,12 +46,16 @@ class TransportMiddleware(MessengerNode, abc.ABC):
         return self.parent
 
     def add_bytes_operator(self, on_send: BytesOperator, on_recv: BytesOperator):
-        self.add_math_target(MNMathTargets.BYTE_SEND, on_send, priority=self.priority)
-        self.add_math_target(MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority)
+        if on_send:
+            self.add_math_target(MNMathTargets.BYTE_SEND, on_send, priority=self.priority)
+        if on_recv:
+            self.add_math_target(MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority)
 
     def add_message_operator(self, on_send: MessageOperator, on_recv: MessageOperator):
-        self.add_math_target(MNMathTargets.MSG_SEND, on_send, priority=self.priority)
-        self.add_math_target(MNMathTargets.MSG_RECV, on_recv, priority=-self.priority)
+        if on_send:
+            self.add_math_target(MNMathTargets.MSG_SEND, on_send, priority=self.priority)
+        if on_recv:
+            self.add_math_target(MNMathTargets.MSG_RECV, on_recv, priority=-self.priority)
 
 
 @dataclasses.dataclass
@@ -103,6 +107,8 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
 
     def datagram_received(self, handle: ConnectionHandle, datagram: bytes):
         datagram = self.calculate(MNMathTargets.BYTE_RECV, datagram)
+        if not datagram:
+            return
         unpacked = self.encoder.unpack(datagram)
         unpacked = self.__set_connection(handle, unpacked)
         converted = self.__convert_messages(handle, unpacked, MNMathTargets.MSG_RECV)
@@ -146,7 +152,8 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         datagram = self.encoder.pack(converted)
         if self.manager.debug_mode:
             self.emit(StandardEvents.DEBUG, f"Sending datagram: {datagram.hex()}")
-        self.send(handle, self.calculate(MNMathTargets.BYTE_SEND, datagram))
+        if datagram := self.calculate(MNMathTargets.BYTE_SEND, datagram):
+            self.send(handle, datagram)
 
     def manage_handle(self, connection: ConnectionHandle):
         self.connections[connection.uuid] = connection
