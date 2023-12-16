@@ -32,7 +32,9 @@ class ZoneBasedRouter(TransportMiddleware):
     def only_visibles(self, objects: list[NetworkObject], handle: ConnectionHandle):
         success, viszones = handle.get_shared_parameter("vz", list[int])
         if not success:
-            self.emit(StandardEvents.WARNING, f"{handle.uuid}: incorrectly set viszones!")
+            self.emit(
+                StandardEvents.WARNING, f"{handle.uuid}: incorrectly set viszones!"
+            )
             return []
 
         vz_set = set(viszones)
@@ -48,13 +50,17 @@ class ZoneBasedRouter(TransportMiddleware):
             # Strange but ok
             # Note that we still have to do this even if obj is falsey because
             # we might be generating it still
-            self.emit(StandardEvents.WARNING, f"Message sent but the object is missing: {oid}")
+            self.emit(
+                StandardEvents.WARNING, f"Message sent but the object is missing: {oid}"
+            )
             return None
 
         zone = obj.zone
         success, viszones = handle.get_shared_parameter("vz", list[int])
         if not success:
-            self.emit(StandardEvents.WARNING, f"{handle.uuid}: incorrectly set viszones!")
+            self.emit(
+                StandardEvents.WARNING, f"{handle.uuid}: incorrectly set viszones!"
+            )
             return None
 
         if zone in viszones:

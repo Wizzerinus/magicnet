@@ -20,6 +20,14 @@ class MsgMotd(MessageProcessor):
         if message.sent_from.activated:
             self.emit(StandardEvents.WARNING, "MOTD sent multiple times!")
             return
+
+        if self.manager.motd is not None:
+            self.emit(
+                StandardEvents.WARNING,
+                f"Unexpected MOTD message from {message.sent_from}!",
+            )
+            return
+
         motd = message.parameters[0]
         self.emit(MNEvents.MOTD_SET, motd)
         second_message = NetMessage(

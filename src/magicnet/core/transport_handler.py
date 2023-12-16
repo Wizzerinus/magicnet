@@ -47,15 +47,23 @@ class TransportMiddleware(MessengerNode, abc.ABC):
 
     def add_bytes_operator(self, on_send: BytesOperator, on_recv: BytesOperator):
         if on_send:
-            self.add_math_target(MNMathTargets.BYTE_SEND, on_send, priority=self.priority)
+            self.add_math_target(
+                MNMathTargets.BYTE_SEND, on_send, priority=self.priority
+            )
         if on_recv:
-            self.add_math_target(MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority)
+            self.add_math_target(
+                MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority
+            )
 
     def add_message_operator(self, on_send: MessageOperator, on_recv: MessageOperator):
         if on_send:
-            self.add_math_target(MNMathTargets.MSG_SEND, on_send, priority=self.priority)
+            self.add_math_target(
+                MNMathTargets.MSG_SEND, on_send, priority=self.priority
+            )
         if on_recv:
-            self.add_math_target(MNMathTargets.MSG_RECV, on_recv, priority=-self.priority)
+            self.add_math_target(
+                MNMathTargets.MSG_RECV, on_recv, priority=-self.priority
+            )
 
 
 @dataclasses.dataclass

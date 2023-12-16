@@ -257,11 +257,9 @@ other event loops made by other libraries).
   * Requires the use of a custom event handler (`MNMathTargets.FIELD_CALL_ALLOWED`)
 * **Message API routing** - domain-specific 
   * Requires the use of a custom TransportManager or HandleFilter
-* **Message-level security** - not implemented / domain-specific
-  * This includes things like "Reject MOTD from the clients". Because actually,
-    currently the server will respond to the MOTD, which can be used to extract
-    the protocol hash from the server. This should be prevented through a middleware.
-    Right now there isn't one, but I will add one into the standard library at some point.
+* **Message-level security** - partially implemented / domain-specific
+  * This includes things like "Reject MOTD from the clients" and "Reject unauthenticated messages".
+    Those are currently implemented.
   * This also includes things like "Encrypt all messages". This is a domain-specific area -
     everything can be done through middlewares, and also goes out of the scope of the library.
 * **Protocol-level security** - not implemented
