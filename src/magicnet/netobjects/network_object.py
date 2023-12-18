@@ -261,13 +261,19 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             raise errors.UnknownObjectMessage(self.network_name, message)
         return self.message_index[message]
 
-    def send_message(self, message: str, args: list | tuple = ()) -> None:
+    def send_message(
+        self,
+        message: str,
+        args: list | tuple = (),
+        *,
+        receiver: ConnectionHandle | None = None,
+    ) -> None:
         args = unpack_dataclasses(args)
         role_id, field_id = self.resolve_field(message)
         self.persist_field_data(role_id, field_id, list(args))
         if self.object_state == ObjectState.GENERATED:
             self.manager.object_manager.request_call_field(
-                self, role_id, field_id, args
+                receiver, self, role_id, field_id, args
             )
 
     @abc.abstractmethod

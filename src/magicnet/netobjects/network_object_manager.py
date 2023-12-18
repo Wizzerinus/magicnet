@@ -152,10 +152,19 @@ class NetworkObjectManager(MessengerNode):
         )
         self.manager.send_message(msg)
 
-    def request_call_field(self, obj: NetworkObject, role: int, field: int, params):
+    def request_call_field(
+        self,
+        receiver: ConnectionHandle | None,
+        obj: NetworkObject,
+        role: int,
+        field: int,
+        params,
+    ):
         msg = NetMessage(
             StandardMessageTypes.SET_OBJECT_FIELD, (obj.oid, role, field, params)
         )
+        if receiver is not None:
+            msg.destination = receiver
         self.manager.send_message(msg)
 
     def request_visible_objects(self):

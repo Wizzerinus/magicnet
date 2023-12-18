@@ -76,6 +76,12 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
 
     debug_mode: bool = False
 
+    current_message: NetMessage | None = dataclasses.field(default=None, init=False)
+
+    @property
+    def current_sender(self) -> ConnectionHandle | None:
+        return self.current_message.sent_from if self.current_message else None
+
     @property
     def managed_objects(self) -> dict[int, AnyNetObject]:
         return self.object_manager.managed_objects
@@ -124,12 +130,14 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
                 if self.debug_mode:
                     self.emit(StandardEvents.DEBUG, f"Received message: {msg}")
 
+                self.current_message = msg
                 try:
                     self.dg_processor.process_message(msg)
                 except Exception as e:  # noqa: BLE001
                     self.emit(
                         StandardEvents.EXCEPTION, "Error while processing a message", e
                     )
+                self.current_message = None
 
     def open_server(self, **kwargs):
         """

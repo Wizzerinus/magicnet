@@ -153,3 +153,42 @@ def test_field_visibility():
     cl_object = client.managed_objects.get(srv_object.oid)
     assert cl_object.a == 0
     assert cl_object.b == 100
+
+
+def test_message_receiver():
+    @dataclasses.dataclass
+    class TestNetObject(NetworkObject):
+        network_name = "test_obj"
+        object_role = 0
+
+        value: int = 0
+
+        @NetworkField
+        def set_value(self, value: network_types.uint16 = 256):
+            self.value = value
+
+        @NetworkField
+        def set_my_value(self, val: network_types.uint16 = 256):
+            self.send_message("set_value", [val], receiver=self.manager.current_sender)
+
+        def net_create(self) -> None:
+            pass
+
+        def net_delete(self) -> None:
+            pass
+
+    tester = FlexibleNetworkObjectTester.create_and_start(TestNetObject, TestNetObject)
+    c1 = tester.make_client()
+    c2 = tester.make_client()
+
+    srv_object = TestNetObject(tester.server)
+    srv_object.send_message("set_value", [100])
+    srv_object.request_generate()
+
+    c1_object = c1.managed_objects[srv_object.oid]
+    c2_object = c2.managed_objects[srv_object.oid]
+    assert c1_object.value == c2_object.value == 100
+
+    c2_object.send_message("set_my_value", [200])
+    assert c2_object.value == 200
+    assert c1_object.value == 100
