@@ -43,18 +43,18 @@ def test_object_zones():
     second_object.send_message("set_value", [105])
     second_object.request_generate(zone=2)
 
-    assert first_object.oid not in second_client.managed_objects
-    assert second_client.managed_objects.get(second_object.oid).value == 105
-    assert first_client.managed_objects.get(first_object.oid).value == 100
-    assert second_object.oid not in first_client.managed_objects
+    assert first_object.oid not in second_client.net_objects
+    assert second_client.net_objects.get(second_object.oid).value == 105
+    assert first_client.net_objects.get(first_object.oid).value == 100
+    assert second_object.oid not in first_client.net_objects
 
     first_client.get_handle("server").set_shared_parameter("vz", [2])
     second_client.get_handle("server").set_shared_parameter("vz", [1])
     # Note: invisible object unloading is currently not implemented
     first_client.object_manager.request_visible_objects()
-    assert first_client.managed_objects.get(second_object.oid).value == 105
+    assert first_client.net_objects.get(second_object.oid).value == 105
 
     second_object.send_message("set_value", [110])
-    assert first_client.managed_objects.get(second_object.oid).value == 110
+    assert first_client.net_objects.get(second_object.oid).value == 110
     # we get a discrepancy here because second client no longer sees updates
-    assert second_client.managed_objects.get(second_object.oid).value == 105
+    assert second_client.net_objects.get(second_object.oid).value == 105

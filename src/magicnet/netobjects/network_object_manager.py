@@ -20,7 +20,7 @@ ParameterDefinition = list[tuple[int, int, list]]
 
 @dataclasses.dataclass
 class NetworkObjectManager(MessengerNode):
-    managed_objects: dict[int, NetworkObject] = dataclasses.field(default_factory=dict)
+    net_objects: dict[int, NetworkObject] = dataclasses.field(default_factory=dict)
     partial_objects: dict[int, NetworkObject] = dataclasses.field(default_factory=dict)
     """
     Objects that were created on this manager,
@@ -37,7 +37,7 @@ class NetworkObjectManager(MessengerNode):
         return self.parent
 
     def add_network_object(self, obj: NetworkObject):
-        self.managed_objects[obj.oid] = obj
+        self.net_objects[obj.oid] = obj
 
     def send_network_object_generate(
         self,
@@ -63,11 +63,11 @@ class NetworkObjectManager(MessengerNode):
 
     def get_visible_objects(self, handle: ConnectionHandle) -> list[NetworkObject]:
         return self.listener.calculate(
-            MNMathTargets.VISIBLE_OBJECTS, list(self.managed_objects.values()), handle
+            MNMathTargets.VISIBLE_OBJECTS, list(self.net_objects.values()), handle
         )
 
     def initialize_object(self, obj_id: int):
-        if (obj := self.managed_objects.get(obj_id)) is None:
+        if (obj := self.net_objects.get(obj_id)) is None:
             self.emit(StandardEvents.WARNING, f"Unable to init the object {obj_id}!")
             return
 
@@ -81,7 +81,7 @@ class NetworkObjectManager(MessengerNode):
         obj.object_state = ObjectState.GENERATED
 
     def destroy_network_object(self, obj_id: int):
-        if (obj := self.managed_objects.get(obj_id)) is None:
+        if (obj := self.net_objects.get(obj_id)) is None:
             self.emit(StandardEvents.WARNING, f"Unable to destroy the object {obj_id}!")
             return
 
@@ -89,14 +89,14 @@ class NetworkObjectManager(MessengerNode):
         obj.object_state = ObjectState.INVALID
         obj.net_delete()
         obj.destroy()
-        self.managed_objects.pop(obj.oid, None)
+        self.net_objects.pop(obj.oid, None)
 
     def request_delete_object(self, obj_id: int):
         msg = NetMessage(StandardMessageTypes.REQUEST_DELETE_OBJECT, (obj_id,))
         self.manager.send_message(msg)
 
     def perform_object_deletion(self, obj_id: int, repo_number: int):
-        if (obj := self.managed_objects.get(obj_id)) is None:
+        if (obj := self.net_objects.get(obj_id)) is None:
             # we will warn when deleting it locally
             return
 

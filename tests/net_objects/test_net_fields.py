@@ -33,7 +33,7 @@ def test_network_calls():
     srv_object = TestNetObject(tester.server)
     srv_object.request_generate()
 
-    cl_object = tester.client.managed_objects.get(srv_object.oid)
+    cl_object = tester.client.net_objects.get(srv_object.oid)
     assert cl_object.value == srv_object.value == 0
 
     srv_object.send_message("set_value")
@@ -87,7 +87,7 @@ def test_dataclasses_arguments():
     srv_object = TestNetObject(tester.server)
     srv_object.request_generate()
 
-    cl_object = tester.client.managed_objects.get(srv_object.oid)
+    cl_object = tester.client.net_objects.get(srv_object.oid)
     assert cl_object.value is None and srv_object.value is None
 
     srv_object.send_message("set_value", [(1, 2, 3)])
@@ -148,9 +148,9 @@ def test_field_visibility():
     srv_object.request_generate()
 
     client = tester.make_client()
-    assert client.managed_objects.get(srv_object.oid) is None
+    assert client.net_objects.get(srv_object.oid) is None
     client.object_manager.request_visible_objects()
-    cl_object = client.managed_objects.get(srv_object.oid)
+    cl_object = client.net_objects.get(srv_object.oid)
     assert cl_object.a == 0
     assert cl_object.b == 100
 
@@ -185,8 +185,8 @@ def test_message_receiver():
     srv_object.send_message("set_value", [100])
     srv_object.request_generate()
 
-    c1_object = c1.managed_objects[srv_object.oid]
-    c2_object = c2.managed_objects[srv_object.oid]
+    c1_object = c1.net_objects[srv_object.oid]
+    c2_object = c2.net_objects[srv_object.oid]
     assert c1_object.value == c2_object.value == 100
 
     c2_object.send_message("set_my_value", [200])

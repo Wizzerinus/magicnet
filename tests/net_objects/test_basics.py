@@ -26,14 +26,14 @@ def test_basics():
     srv_object = TestNetObject(tester.server)
     assert srv_object.object_state == ObjectState.INVALID
     srv_object.request_generate()
-    cl_object = tester.client.managed_objects.get(srv_object.oid)
+    cl_object = tester.client.net_objects.get(srv_object.oid)
     assert cl_object.value == srv_object.value == 1
     assert cl_object.object_state == ObjectState.GENERATED
     srv_object.request_delete()
     assert cl_object.value == srv_object.value == 2
     assert cl_object.object_state == ObjectState.INVALID
-    assert cl_object.oid not in tester.client.managed_objects
-    assert cl_object.oid not in tester.server.managed_objects
+    assert cl_object.oid not in tester.client.net_objects
+    assert cl_object.oid not in tester.server.net_objects
 
 
 def test_asymmetric():
@@ -68,12 +68,12 @@ def test_asymmetric():
     srv_object = TestNetObjectAI(tester.server)
     assert srv_object.object_state == ObjectState.INVALID
     srv_object.request_generate()
-    cl_object = tester.client.managed_objects.get(srv_object.oid)
+    cl_object = tester.client.net_objects.get(srv_object.oid)
     assert isinstance(cl_object, TestNetObject)
     assert cl_object.value == srv_object.value - 1 == 1
     assert cl_object.object_state == ObjectState.GENERATED
     srv_object.request_delete()
     assert cl_object.value == srv_object.value - 1 == 2
     assert cl_object.object_state == ObjectState.INVALID
-    assert cl_object.oid not in tester.client.managed_objects
-    assert cl_object.oid not in tester.server.managed_objects
+    assert cl_object.oid not in tester.client.net_objects
+    assert cl_object.oid not in tester.server.net_objects

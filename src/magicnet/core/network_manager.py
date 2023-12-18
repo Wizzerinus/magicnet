@@ -83,8 +83,8 @@ class NetworkManager(MessengerNode, Generic[AnyNetObject]):
         return self.current_message.sent_from if self.current_message else None
 
     @property
-    def managed_objects(self) -> dict[int, AnyNetObject]:
-        return self.object_manager.managed_objects
+    def net_objects(self) -> dict[int, AnyNetObject]:
+        return self.object_manager.net_objects
 
     def make_repository(self) -> int:
         self.repository_allocator += 1

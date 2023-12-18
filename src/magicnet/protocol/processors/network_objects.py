@@ -107,7 +107,7 @@ class MsgSetObjectField(MessageProcessor):
 
     def invoke(self, message: NetMessage):
         object_id, role, field, args = message.parameters
-        if not (obj := self.manager.managed_objects.get(object_id)):
+        if not (obj := self.manager.net_objects.get(object_id)):
             self.emit(
                 StandardEvents.WARNING,
                 f"Ignoring invalid set_object_field for object {object_id}",

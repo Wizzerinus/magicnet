@@ -45,7 +45,7 @@ class ZoneBasedRouter(TransportMiddleware):
             return message
 
         oid = message.parameters[0]
-        obj = self.transport.manager.managed_objects.get(oid)
+        obj = self.transport.manager.net_objects.get(oid)
         if obj is None:
             # Strange but ok
             # Note that we still have to do this even if obj is falsey because
