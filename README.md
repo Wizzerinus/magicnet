@@ -6,39 +6,6 @@ Source code: <https://github.com/wizzerinus/magicnet>
 
 ---
 
-## Introduction
-
-MagicNet is a modern library for building real-time web applications.
-
-Its key features are:
-
-* **Client simplicity**: write simple and intuitive Python code, typehint your code if you want
-  (strongly recommended to use typehints with the object-based API but still optional),
-  write zero boilerplate, and get efficient network interaction in any scenario.
-* **Client flexibility**:
-  * MagicNet makes no assumptions about the networking stack of your application.
-    Many libraries require a specific networking stack (i.e. AsyncIO), which may not at all
-    work with a different event loop.
-  * MagicNet's low level functionality is completely decoupled from the high-level functionality.
-    Most of the time, changing the networking stack is as simple as changing one variable
-    indicating the way to send pure bytestrings. The application code itself
-    does not need to care about the networking stack or event loop used.
-  * MagicNet packs both a low-level Message API and a high-level Object API (see examples below).
-    This allows writing domain-specific code in the way that is best suited for a certain problem.
-* **Server flexibility**: MagicNet can be used with a simple client-server structure,
-  as well as a more complicated structure with multiple servers, proxies, etc.
-  Proxies themselves can be also implemented in the same library using the
-  transport middleware system.
-* **Fast prototyping:** MagicNet can be used with a Native connection protocol,
-  which merges all parts of the application into one process without changing
-  the internal functionality. Any client code that works on this protocol
-  is almost guaranteed to work on any different protocol.
-* **Simple protocol**: If any server is slower than desired, that server can be rewritten
-  in a different language (such as Go or Rust) without touching the rest of infrastructure,
-  or the application-specific code used.
-
----
-
 ## Requirements
 
 Requires Python 3.10+. 
@@ -66,6 +33,7 @@ Full-fledged examples can be found in `examples` directory.
   * Note that this example will immediately exit after sending a few messages.
 * Client-server basics: run `b_server.py`, then `b_client.py` or `b_panda3d_client.py`
   * The Panda3D client requires a reasonably recent version of Panda3D.
+  * The Panda3D client is very barebones and mostly included as a test of working with different event loops.
 * Network objects: run `c_network_objects/c_marshal_things.py`, then `c_network_objects/c_server.py`,
   then `c_network_objects/c_client.py`.
 
@@ -130,6 +98,7 @@ from magicnet.protocol import network_types
 # On the server
 @dataclasses.dataclass
 class NetworkNumberServer(NetworkObject):
+    # All roles can also use the same class if needed, see netobject tests
     network_name = "one-number"
     object_role = 1
     value: int = dataclasses.field(init=False, default=0)
