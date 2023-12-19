@@ -58,7 +58,7 @@ class NetworkObjectManager(MessengerNode):
         msg2 = NetMessage(StandardMessageTypes.OBJECT_GENERATE_DONE, (obj.oid,))
         for msg in [msg1, *field_messages, msg2]:
             if handle is not None:
-                msg.f_destination = handle
+                msg.destination = handle
             self.manager.send_message(msg)
 
     def get_visible_objects(self, handle: ConnectionHandle) -> list[NetworkObject]:

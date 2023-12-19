@@ -4,7 +4,7 @@ from uuid import uuid4
 from magicnet.batteries.encoders import MsgpackEncoder
 from magicnet.batteries.middlewares.message_validation import MessageValidatorMiddleware
 from magicnet.batteries.transports.socket_asyncio import AsyncIOSocketTransport
-from magicnet.core.handle_filter import HandleFilter
+from magicnet.core.handle_filter import BaseHandleFilter
 from magicnet.core.net_message import NetMessage
 from magicnet.core.transport_manager import TransportParameters
 from magicnet.protocol import network_types
@@ -39,12 +39,12 @@ class MsgCustom(MessageProcessor):
             destination=message.sent_from,
         )
         self.manager.send_message(to_send)
-        # The filter used here will use `destination` to broadcast
+        # The filter used here will use `routing_data` to broadcast
         # to everyone except the destination, see below
         broadcast = NetMessage(
             MSG_BROADCAST,
             (client_name, message.parameters[0]),
-            destination=message.sent_from,
+            routing_data=message.sent_from,
         )
         self.manager.send_message(broadcast)
 
@@ -77,17 +77,15 @@ extra_message_types = {
 }
 
 
-class EverywhereExceptBack(HandleFilter):
+class EverywhereExceptBack(BaseHandleFilter):
     def resolve_destination(self, message: NetMessage) -> Collection[uuid4]:
         if message.message_type == MSG_BROADCAST:
             return [
                 k
                 for k in self.transport.connections.keys()
-                if k != message.destination.uuid
+                if k != message.routing_data.uuid
             ]
-        if message.destination is not None:
-            return [message.destination.uuid]
-        return self.transport.connections.keys()
+        return super().resolve_destination(message)
 
 
 middlewares = [MessageValidatorMiddleware]

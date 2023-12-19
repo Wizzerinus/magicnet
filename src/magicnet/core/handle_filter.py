@@ -43,6 +43,4 @@ class BaseHandleFilter(HandleFilter):
     """
 
     def resolve_destination(self, message: NetMessage) -> Collection[uuid4]:
-        if message.destination is not None:
-            return [message.destination.uuid]
         return self.transport.connections.keys()

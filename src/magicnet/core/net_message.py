@@ -1,7 +1,7 @@
 __all__ = ["NetMessage", "standard_range", "client_repo_range"]
 
 import dataclasses
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from magicnet.core.connection import ConnectionHandle
@@ -27,18 +27,15 @@ class NetMessage:
     """
     destination: "ConnectionHandle" = None
     """
-    Existence of this field is a bit misleading, it usually only matters
-    for the callback set on HandleFilter (or TransportManager).
-    The default HandleFilter will be only sending messages
-    to the destination if one is set, though.
+    The connection to which this message should be routed.
+    This cannot be overridden by the router in any way.
+    If this is undesired, the application-specific router may use routing_data
+    to determine the destination.
     """
-    f_destination: "ConnectionHandle" = None
+    routing_data: Any = None
     """
-    This is similar to destination, except it cannot be overwritten
-    by the HandleFilter. If this is set the message is always
-    going to this handle and nothing else, regardless of what
-    the filter says (this is for internal messaging purposes).
-    This shouldn't be used except in the internal code of the library.
+    This is a field for the application logic to use, if a custom routing logic
+    is required. It will not be delivered in the message itself.
     """
 
     @property

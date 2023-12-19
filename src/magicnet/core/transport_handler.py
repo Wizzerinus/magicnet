@@ -103,7 +103,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def send_motd(self, handle: ConnectionHandle):
         self.manage_handle(handle)
         message = NetMessage(
-            StandardMessageTypes.MOTD, (self.manager.motd,), f_destination=handle
+            StandardMessageTypes.MOTD, (self.manager.motd,), destination=handle
         )
         self.manager.send_message(message)
 
@@ -141,8 +141,8 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def deliver(self, messages: Iterable[NetMessage]) -> None:
         destinations = defaultdict(list)
         for message in messages:
-            if message.f_destination is not None:
-                destinations[message.f_destination.uuid].append(message)
+            if message.destination is not None:
+                destinations[message.destination.uuid].append(message)
             else:
                 for handle_id in self.handle_filter.resolve_destination(message):
                     destinations[handle_id].append(message)

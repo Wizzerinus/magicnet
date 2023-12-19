@@ -45,7 +45,7 @@ class ConnectionHandle:
 
     def send_disconnect(self, reason: int, detail: str = None):
         msg = NetMessage(
-            StandardMessageTypes.DISCONNECT, (reason, detail), f_destination=self
+            StandardMessageTypes.DISCONNECT, (reason, detail), destination=self
         )
         self.transport.manager.send_message(msg)
         self.destroy()
@@ -60,7 +60,7 @@ class ConnectionHandle:
     def set_shared_parameter(self, name: str, value):
         self.shared_parameters[name] = value
         msg = NetMessage(
-            StandardMessageTypes.SHARED_PARAMETER, (name, value), f_destination=self
+            StandardMessageTypes.SHARED_PARAMETER, (name, value), destination=self
         )
         self.transport.manager.send_message(msg)
 
