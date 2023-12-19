@@ -104,6 +104,7 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
     server: NetworkManager
     clients: list[NetworkManager] = dataclasses.field(default_factory=list)
     debug: bool = False
+    extras = {}
 
     @classmethod
     def create(cls, *args):
@@ -115,6 +116,7 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
             transport_params=("server", cls.server_transport()),
             motd="An example native host",
             client_repository=64,
+            extras=cls.extras,
         )
         server.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "server"))
         return cls(server=server)
@@ -133,6 +135,7 @@ class FlexibleNetworkTester(NetworkTester, abc.ABC):
         client = NetworkManager.create_root(
             transport_type=EverywhereTransportManager,
             transport_params=("client", self.transport()),
+            extras=self.extras,
         )
         client.listen(MNEvents.DISCONNECT, functools.partial(raise_err, "client"))
         if self.debug:

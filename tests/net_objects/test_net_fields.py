@@ -1,10 +1,13 @@
 import dataclasses
 from unittest.mock import MagicMock
 
-from magicnet.core.net_globals import MNEvents
+from magicnet.core.net_globals import MNEvents, MNMathTargets
+from magicnet.core.net_message import NetMessage
 from magicnet.netobjects.network_field import NetworkField
 from magicnet.netobjects.network_object import NetworkObject
 from magicnet.protocol import network_types
+from magicnet.protocol.processor_base import MessageProcessor
+from magicnet.util.messenger import MessengerNode
 from net_objects.net_tester_netobj import (
     SymmetricNetworkObjectTester,
     FlexibleNetworkObjectTester,
@@ -192,3 +195,70 @@ def test_message_receiver():
     c2_object.send_message("set_my_value", [200])
     assert c2_object.value == 200
     assert c1_object.value == 100
+
+
+def test_message_auth():
+    @dataclasses.dataclass
+    class TestNetObject(NetworkObject):
+        network_name = "test_obj"
+        object_role = 0
+
+        public_value: int = 0
+        protected_value: int = 0
+
+        @NetworkField
+        def set_public_value(self, value: network_types.uint16):
+            self.public_value = value
+
+        @NetworkField(auth="admin")
+        def set_protected_value(self, value: network_types.uint16):
+            self.protected_value = value
+
+        def net_create(self) -> None:
+            pass
+
+        def net_delete(self) -> None:
+            pass
+
+    class AuthMessageProcessor(MessageProcessor):
+        def invoke(self, message: NetMessage):
+            # Warning: don't use this method in production lmao
+            if tuple(message.parameters) == ("admin", "password"):
+                message.sent_from.context["auth"] = "admin"
+
+    class AuthNetworkTester(FlexibleNetworkObjectTester):
+        extras = {64: AuthMessageProcessor}
+
+    @dataclasses.dataclass
+    class AuthTester(MessengerNode):
+        def __post_init__(self):
+            self.add_math_target(MNMathTargets.FIELD_CALL_ALLOWED, self.check_auth)
+
+        @staticmethod
+        def check_auth(value, field, handle):
+            if not value:
+                return False
+            if field.args.get("auth") == "admin":
+                return handle.context.get("auth") == "admin"
+            return True
+
+    tester = AuthNetworkTester.create_and_start(TestNetObject, TestNetObject)
+    tester.server.create_child(AuthTester)
+    c1 = tester.make_client()
+    c2 = tester.make_client()
+
+    authorize = NetMessage(64, ("admin", "password"))
+    c1.send_message(authorize)
+
+    srv_object = TestNetObject(tester.server)
+    srv_object.request_generate()
+    c1_object = c1.net_objects[srv_object.oid]
+    c2_object = c2.net_objects[srv_object.oid]
+    c1_object.send_message("set_public_value", [100])
+    c1_object.send_message("set_protected_value", [100])
+    assert srv_object.protected_value == srv_object.public_value == 100
+    c2_object.send_message("set_public_value", [200])
+    c2_object.send_message("set_protected_value", [200])
+    assert srv_object.public_value == 200
+    # The value did not change from an unauthorized client
+    assert srv_object.protected_value == 100
