@@ -88,5 +88,5 @@ hashable = (
 if sys.version_info >= (3, 12, 4):
     _fr_h._evaluate(globals(), locals(), frozenset(), recursive_guard=frozenset())  # noqa
 else:
-    _fr_h.evaluate(globals(), locals(), frozenset())  # noqa
+    _fr_h._evaluate(globals(), locals(), frozenset())  # noqa
 
