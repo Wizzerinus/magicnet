@@ -1,6 +1,7 @@
 __all__ = ["AnnotatedValidator", "Ge", "Lt", "MaxLen"]
 
 import abc
+import sys
 from collections.abc import Callable
 from typing import Annotated, Any, ClassVar, ForwardRef
 
@@ -83,4 +84,9 @@ hashable = (
     | dict[primitive, _fr_h]
     | tuple[_fr_h, ...]
 )
-_fr_h._evaluate(globals(), locals(), frozenset())  # noqa
+
+if sys.version_info >= (3, 12, 4):
+    _fr_h._evaluate(globals(), locals(), frozenset(), recursive_guard=frozenset())  # noqa
+else:
+    _fr_h.evaluate(globals(), locals(), frozenset())  # noqa
+
