@@ -46,18 +46,18 @@ def test_unauthenticated_messages():
 
 def test_bad_hello():
     tester = HackedNetworkTester.create_and_start()
-    msg = NetMessage(StandardMessageTypes.HELLO, [-1, b"123"])
+    msg = NetMessage(StandardMessageTypes.HELLO, (-1, b"123"))
 
     mock = MagicMock()
-    tester.server.listen(StandardEvents.WARNING, mock)
+    tester.client.listen(MNEvents.DISCONNECT, mock)
     tester.client.send_message(msg)
     tester.client.transport.empty_queue()
-    assert "Invalid parameters" in mock.call_args.args[0]
+    assert "server version" in mock.call_args.args[0]
 
 
 def test_no_motd():
     tester = HackedNetworkTester.create_and_start()
-    msg = NetMessage(StandardMessageTypes.MOTD, ["I am malicious"])
+    msg = NetMessage(StandardMessageTypes.MOTD, ("I am malicious",))
 
     mock = MagicMock()
     tester.server.listen(StandardEvents.WARNING, mock)

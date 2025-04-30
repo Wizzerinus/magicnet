@@ -3,3 +3,5 @@
 .pytest_cache
 examples/*-signature.json
 dist
+__pycache__
+.vscode

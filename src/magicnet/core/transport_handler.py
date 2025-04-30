@@ -5,13 +5,10 @@ import dataclasses
 import itertools
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
-from typing import (
-    TYPE_CHECKING,
-    ClassVar,
-    Generic,
-    TypeVar,
-)
-from uuid import uuid4
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from uuid import UUID
+
+from typing_extensions import TypeVar, TypeVarTuple, Unpack
 
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.handle_filter import BaseHandleFilter, HandleFilter
@@ -23,14 +20,16 @@ from magicnet.util.messenger import MessengerNode, StandardEvents
 
 if TYPE_CHECKING:
     from magicnet.core.network_manager import NetworkManager
+    from magicnet.core.transport_manager import TransportManager
 
+Ts = TypeVarTuple("Ts")
 BytesOperator = Callable[[bytes, ConnectionHandle], bytes | None] | None
-MessageOperator = Callable[[NetMessage, ConnectionHandle], NetMessage | None] | None
-ManagerT = TypeVar("ManagerT", bound="NetworkManager")
+MessageOperator = Callable[[NetMessage[Unpack[Ts]], ConnectionHandle], NetMessage[Unpack[Ts]] | None] | None
+ManagerT = TypeVar("ManagerT", bound="NetworkManager", default="NetworkManager")
 
 
 @dataclasses.dataclass
-class TransportMiddleware(MessengerNode, abc.ABC):
+class TransportMiddleware(MessengerNode["TransportHandler[ManagerT]", ManagerT], abc.ABC):
     """
     TransportMiddleware is used to modify messages sent through a transport.
     Middlewares can act on a message level (i.e., filtering unwanted messages)
@@ -42,32 +41,24 @@ class TransportMiddleware(MessengerNode, abc.ABC):
     # Therefore we need to invert the order on receive
 
     @property
-    def transport(self) -> "TransportHandler":
+    def transport(self) -> "TransportHandler[ManagerT]":
         return self.parent
 
     def add_bytes_operator(self, on_send: BytesOperator, on_recv: BytesOperator):
         if on_send:
-            self.add_math_target(
-                MNMathTargets.BYTE_SEND, on_send, priority=self.priority
-            )
+            self.add_math_target(MNMathTargets.BYTE_SEND, on_send, priority=self.priority)
         if on_recv:
-            self.add_math_target(
-                MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority
-            )
+            self.add_math_target(MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority)
 
-    def add_message_operator(self, on_send: MessageOperator, on_recv: MessageOperator):
+    def add_message_operator(self, on_send: MessageOperator[ManagerT], on_recv: MessageOperator[ManagerT]):
         if on_send:
-            self.add_math_target(
-                MNMathTargets.MSG_SEND, on_send, priority=self.priority
-            )
+            self.add_math_target(MNMathTargets.MSG_SEND, on_send, priority=self.priority)
         if on_recv:
-            self.add_math_target(
-                MNMathTargets.MSG_RECV, on_recv, priority=-self.priority
-            )
+            self.add_math_target(MNMathTargets.MSG_RECV, on_recv, priority=-self.priority)
 
 
 @dataclasses.dataclass
-class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
+class TransportHandler(MessengerNode["TransportManager[ManagerT]", ManagerT], abc.ABC, Generic[ManagerT]):
     """
     TransportHandler represents one type of connections between the application
     and other applications on the network.
@@ -78,8 +69,8 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
 
     encoder: ProtocolEncoder
     role: str
-    handle_filter: HandleFilter = dataclasses.field(default_factory=BaseHandleFilter)
-    connections: dict[uuid4, ConnectionHandle] = dataclasses.field(default_factory=dict)
+    handle_filter: HandleFilter[ManagerT] = dataclasses.field(default_factory=BaseHandleFilter[ManagerT])
+    connections: dict[UUID, ConnectionHandle] = dataclasses.field(default_factory=dict)
     middlewares: ClassVar[Collection[type[TransportMiddleware]]] = ()
     """
     Allows adding a list of middlewares to the transport protocol.
@@ -102,9 +93,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
 
     def send_motd(self, handle: ConnectionHandle):
         self.manage_handle(handle)
-        message = NetMessage(
-            StandardMessageTypes.MOTD, (self.manager.motd,), destination=handle
-        )
+        message = NetMessage(StandardMessageTypes.MOTD, (self.manager.motd,), destination=handle)
         self.manager.send_message(message)
 
     def __post_init__(self):
@@ -123,7 +112,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         self.emit(MNEvents.DATAGRAM_RECEIVED, converted)
 
     @staticmethod
-    def __set_connection(connection: ConnectionHandle, messages: Iterable[NetMessage]):
+    def __set_connection(connection: ConnectionHandle, messages: Iterable[NetMessage[Unpack[tuple[Any, ...]]]]):
         for message in messages:
             message.sent_from = connection
             yield message
@@ -131,15 +120,15 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
     def __convert_messages(
         self,
         handle: ConnectionHandle,
-        messages: Iterable[NetMessage],
+        messages: Iterable[NetMessage[Unpack[tuple[Any, ...]]]],
         event: MNMathTargets,
     ):
         for message in messages:
             if converted := self.calculate(event, message, handle):
                 yield converted
 
-    def deliver(self, messages: Iterable[NetMessage]) -> None:
-        destinations = defaultdict(list)
+    def deliver(self, messages: Iterable[NetMessage[Unpack[tuple[Any, ...]]]]) -> None:
+        destinations: dict[UUID, list[NetMessage[Unpack[tuple[Any, ...]]]]] = defaultdict(list)
         for message in messages:
             if message.destination is not None:
                 destinations[message.destination.uuid].append(message)
@@ -154,7 +143,7 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
             self.__deliver_to_handle(self.connections[dest], message_group)
 
     def __deliver_to_handle(
-        self, handle: ConnectionHandle, messages: Iterable[NetMessage]
+        self, handle: ConnectionHandle, messages: Iterable[NetMessage[Unpack[tuple[Any, ...]]]]
     ) -> None:
         converted = self.__convert_messages(handle, messages, MNMathTargets.MSG_SEND)
         datagram = self.encoder.pack(converted)
@@ -174,14 +163,14 @@ class TransportHandler(MessengerNode, abc.ABC, Generic[ManagerT]):
         """
 
     @abc.abstractmethod
-    def connect(self, *connection_data) -> None:
+    def connect(self, *connection_data: Any) -> None:
         """
         Connects to a server (remote or local, depending on transport type).
         datagram_received() should be called whenever a datagram is obtained.
         """
 
     @abc.abstractmethod
-    def open_server(self, *args) -> None:
+    def open_server(self, *args: Any) -> None:
         """
         Beging listening on a server.
         datagram_received() should be called whenever a datagram is obtained.

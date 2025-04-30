@@ -25,14 +25,16 @@ class AsyncIOSocketTransport(TransportHandler["AsyncIONetworkManager"]):
         writer.write(dg)
         self.manager.spawn_task(writer.drain())
 
-    def connect(self, host: str, port: int) -> None:
+    def connect(self, host: str | None = None, port: int | None = None, *more: object) -> None:
+        assert host is not None and port is not None
         self.manager.spawn_task(self.client_connection(host, port))
 
     async def client_connection(self, host: str, port: int):
         reader, writer = await asyncio.open_connection(host, port)
         await self.srv_callback(reader, writer, from_client=True)
 
-    def open_server(self, host: str, port: int) -> None:
+    def open_server(self, host: str | None = None, port: int | None = None, *more: object) -> None:
+        assert host is not None and port is not None
         self.manager.spawn_task(self.open_server_async(host, port))
 
     async def open_server_async(self, host: str, port: int):

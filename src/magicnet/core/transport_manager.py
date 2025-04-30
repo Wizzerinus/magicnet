@@ -5,7 +5,9 @@ import contextlib
 import dataclasses
 from collections import defaultdict
 from collections.abc import Collection, Iterable
-from typing import TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+
+from typing_extensions import Unpack
 
 from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
@@ -15,32 +17,36 @@ from magicnet.core.protocol_encoder import ProtocolEncoder
 from magicnet.core.transport_handler import TransportHandler, TransportMiddleware
 from magicnet.util.messenger import MessengerNode, StandardEvents
 
+if TYPE_CHECKING:
+    from magicnet.core.network_manager import NetworkManager
+
+T = TypeVar("T", bound="NetworkManager")
+
 
 @dataclasses.dataclass
-class TransportParameters:
+class TransportParameters(Generic[T]):
     encoder: ProtocolEncoder
-    transport: type[TransportHandler]
+    transport: type[TransportHandler[T]]
     filter: type[HandleFilter] | None = None
     middlewares: Collection[type[TransportMiddleware]] = ()
 
 
-TransportActiveType = dict[str, TransportHandler]
-TransportRowType = dict[str, TransportParameters]
-TransportMatrixType = dict[str, TransportRowType]
-TransportAnyType = TransportRowType | TransportMatrixType
-T = TypeVar("T", bound="TransportManager")
+TransportActiveType = dict[str, TransportHandler[T]]
+TransportRowType = dict[str, TransportParameters[T]]
+TransportMatrixType = dict[str, TransportRowType[T]]
+TransportAnyType = TransportRowType[T] | TransportMatrixType[T]
 
 
 def extract_transport_method(
-    parent: "TransportManager", role: str, matrix: TransportAnyType
-) -> TransportActiveType:
+    parent: "TransportManager[T]", role: str, matrix: TransportAnyType[T]
+) -> TransportActiveType[T]:
     if role not in matrix:
         use_matrix = True
     else:
         use_matrix = isinstance(matrix[role], dict)
 
     if use_matrix:
-        matrix = cast(TransportMatrixType, matrix)
+        matrix = cast(TransportMatrixType[T], matrix)
         row = dict(matrix.get(role, {}))
         # Some magic to allow defining tables by only defining one of the two cells
         # i.e. defining {"Client": {"MessageDirector": ...}}
@@ -49,21 +55,16 @@ def extract_transport_method(
         for that_role in matrix:
             if role == that_role or that_role in row or role not in matrix[that_role]:
                 continue
-            params: TransportParameters = matrix[that_role][role]
+            params: TransportParameters[T] = matrix[that_role][role]
             row[that_role] = TransportParameters(
-                params.encoder.symmetrize(),
-                params.transport,
-                params.filter,
-                params.middlewares,
+                params.encoder.symmetrize(), params.transport, params.filter, params.middlewares
             )
     else:
-        row = cast(TransportRowType, matrix)
+        row = cast(TransportRowType[T], matrix)
 
-    output = {}
+    output: dict[str, TransportHandler[T]] = {}
     for that_role, params in row.items():
-        kwargs = dict(
-            role=that_role, encoder=params.encoder, extra_middlewares=params.middlewares
-        )
+        kwargs: dict[str, object] = dict(role=that_role, encoder=params.encoder, extra_middlewares=params.middlewares)
         if params.filter is not None:
             kwargs["handle_filter"] = params.filter()
         transport = parent.create_child(params.transport, **kwargs)
@@ -73,7 +74,7 @@ def extract_transport_method(
 
 
 @dataclasses.dataclass
-class TransportManager(MessengerNode, abc.ABC):
+class TransportManager(MessengerNode[T, T], abc.ABC):
     """
     TransportManager is a mid-level mechanism used to integrate
     one or more TransportHandlers together. It is also used
@@ -82,17 +83,12 @@ class TransportManager(MessengerNode, abc.ABC):
     """
 
     role: str
-    transports: dict[str, TransportHandler]
+    transports: dict[str, TransportHandler[T]]
     queue_active: bool = False
-    __delivery_queue: list[NetMessage] = dataclasses.field(default_factory=list)
+    _delivery_queue: list[NetMessage[Unpack[tuple[Any, ...]]]] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_map(
-        cls: T,
-        parent: MessengerNode,
-        role: str,
-        transport_map: TransportAnyType,
-    ) -> T:
+    def from_map(cls, parent: "T", role: str, transport_map: TransportAnyType[T]):
         obj = cls(role=role, transports={}, _parent=parent)
         obj.transports = extract_transport_method(obj, role, transport_map)
         return obj
@@ -102,7 +98,7 @@ class TransportManager(MessengerNode, abc.ABC):
             transport.parent = self
 
     @abc.abstractmethod
-    def resolve_destination(self, msg: NetMessage) -> Collection[str]:
+    def resolve_destination(self, msg: NetMessage[Unpack[tuple[Any, ...]]]) -> Collection[str]:
         """
         Returns the set of roles that a message should be delivered to.
         The message will be copied to each of the destinations here.
@@ -110,9 +106,9 @@ class TransportManager(MessengerNode, abc.ABC):
         across multiple different destinations.
         """
 
-    def send(self, message: NetMessage):
+    def send(self, message: NetMessage[Unpack[tuple[Any, ...]]]):
         if self.queue_active:
-            self.__delivery_queue.append(message)
+            self._delivery_queue.append(message)
         else:
             self.__deliver([message])
 
@@ -130,13 +126,13 @@ class TransportManager(MessengerNode, abc.ABC):
         self.empty_queue()
 
     def empty_queue(self):
-        if self.__delivery_queue:
-            queue = self.__delivery_queue
-            self.__delivery_queue = []
+        if self._delivery_queue:
+            queue = self._delivery_queue
+            self._delivery_queue = []
             self.__deliver(queue)
 
-    def __deliver(self, messages: Iterable[NetMessage]) -> None:
-        destinations = defaultdict(list)
+    def __deliver(self, messages: Iterable[NetMessage[Unpack[tuple[Any, ...]]]]) -> None:
+        destinations: dict[str, list[NetMessage[Unpack[tuple[Any, ...]]]]] = defaultdict(list)
         for message in messages:
             for dest in self.resolve_destination(message):
                 destinations[dest].append(message)
@@ -146,7 +142,7 @@ class TransportManager(MessengerNode, abc.ABC):
                 self.emit(StandardEvents.ERROR, f"Unknown network role: {dest}!")
             self.transports[dest].deliver(message_group)
 
-    def open_servers(self, **kwargs):
+    def open_servers(self, **kwargs: Iterable[Any]):
         for role in kwargs:
             if role not in self.transports:
                 raise errors.UnknownRole(role)
@@ -155,7 +151,7 @@ class TransportManager(MessengerNode, abc.ABC):
             transport = self.transports[role]
             transport.open_server(*args)
 
-    def make_connections(self, **kwargs):
+    def make_connections(self, **kwargs: Iterable[Any]):
         for role in kwargs:
             if role not in self.transports:
                 raise errors.UnknownRole(role)

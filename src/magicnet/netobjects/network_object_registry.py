@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass
-class NetworkObjectRegistry(MessengerNode):
+class NetworkObjectRegistry(MessengerNode["NetworkManager", "NetworkManager"]):
     added_classes: list[type[NetworkObject]] = dataclasses.field(default_factory=list)
     foreign_classes: list[type[NetworkObject]] = dataclasses.field(default_factory=list)
     classes: dict[int, type[NetworkObject]] = dataclasses.field(default_factory=dict)
@@ -34,9 +34,7 @@ class NetworkObjectRegistry(MessengerNode):
         elif self.manager.object_signature_filenames:
             self.load_from_filenames()
 
-    def register_object(
-        self, object_type: type[NetworkObject], *, foreign: bool = False
-    ):
+    def register_object(self, object_type: type[NetworkObject], *, foreign: bool = False):
         if self.initialized:
             raise errors.RegistryObjectAfterInitialization(object_type.__name__)
 
@@ -96,12 +94,15 @@ class NetworkObjectRegistry(MessengerNode):
             clazz.finalize_fields()
 
     def load_from_filenames(self):
-        items = []
+        if not self.manager.object_signature_filenames:
+            return
+        items: list[dict[str, Any]] = []
         for file in self.manager.object_signature_filenames:
             with open(file) as f:
                 items.append(json.load(f))
         self.initialize(items)
 
     def marshal_all_files(self):
+        assert self.manager.marshalling_mode, "marshalling mode not configured"
         with open(self.manager.marshalling_mode, "w") as f:
             json.dump(self.marshal_classes(), f)

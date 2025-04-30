@@ -3,6 +3,7 @@ __all__ = ["SignatureItem", "FieldSignature", "SignatureFlags"]
 
 import dataclasses
 import inspect
+from collections.abc import Callable
 from enum import IntFlag, auto
 from typing import Any, Union
 
@@ -57,9 +58,7 @@ class SignatureItem:
         return annotation
 
     @classmethod
-    def from_parameter(
-        cls, parameter: inspect.Parameter
-    ) -> Union["SignatureItem", None]:
+    def from_parameter(cls, parameter: inspect.Parameter) -> Union["SignatureItem", None]:
         if parameter.name in ("cls", "self"):
             # don't care about class instance
             return None
@@ -100,7 +99,7 @@ class FieldSignature:
     def __repr__(self):
         return f"{self.name}{self.signature}"
 
-    def set_from_callable(self, field: callable, flags: SignatureFlags):
+    def set_from_callable(self, field: Callable[..., Any], flags: SignatureFlags):
         self.signature = SignatureItem.from_signature(inspect.signature(field))
         self.flags = flags
 
@@ -111,15 +110,13 @@ class FieldSignature:
     def set_name(self, name: str):
         self.name = name
 
-    def validate_arguments(self, args: list, *, on_call_site: bool = False):
-        parameters = []
+    def validate_arguments(self, args: list[Any], *, on_call_site: bool = False):
+        parameters: list[Any] = []
         try:
             variadic_param: SignatureItem | None = None
             for i in range(max(len(args), len(self.signature))):
                 value = args[i] if i < len(args) else NoValueProvided
-                signature = (
-                    self.signature[i] if i < len(self.signature) else variadic_param
-                )
+                signature = self.signature[i] if i < len(self.signature) else variadic_param
                 if signature is None:
                     raise errors.TooManyArguments(args, len(self.signature))
                 # raises if something is wrong

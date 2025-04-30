@@ -20,13 +20,12 @@ from typing import (
 )
 
 from magicnet.core import errors
-from magicnet.protocol import network_types
 
 
 @dataclasses.dataclass
 class MemoryObject:
-    visited: set = dataclasses.field(default_factory=set)
-    weak_visited: set = dataclasses.field(default_factory=set)
+    visited: set[Any] = dataclasses.field(default_factory=set)
+    weak_visited: set[Any] = dataclasses.field(default_factory=set)
 
 
 def check_dict(value, hint, memory):
@@ -114,9 +113,9 @@ def check_predicates(value, metadata):
 
 
 def check_type(
-    value,
-    hint: type[network_types.hashable],
-    memory: dict | None = None,
+    value: Any,
+    hint: type[Any],
+    memory: MemoryObject | None = None,
     *,
     ignore_memory: bool = False,
 ):
@@ -145,9 +144,9 @@ def check_type(
     if origin_type not in SKIP_ISINSTANCE and not isinstance(value, origin_type):
         # tuples and lists are interchangeable
         # because not making this breaks a lot of things
-        if origin_type == tuple and isinstance(value, list):
+        if origin_type is tuple and isinstance(value, list):
             pass
-        elif origin_type == list and isinstance(value, tuple):
+        elif origin_type is list and isinstance(value, tuple):
             pass
         else:
             raise errors.TypeComparisonFailed(origin_type, value)

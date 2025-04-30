@@ -4,13 +4,14 @@ import abc
 import dataclasses
 from collections import defaultdict
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNEvents
 from magicnet.netobjects.network_field import NetworkField
 from magicnet.netobjects.network_object_meta import NetworkObjectMeta
+from magicnet.protocol import network_types
 from magicnet.util.messenger import MessengerNode, StandardEvents
 from magicnet.util.typechecking.dataclass_converter import unpack_dataclasses
 from magicnet.util.typechecking.field_signature import FieldSignature, SignatureFlags
@@ -18,8 +19,9 @@ from magicnet.util.typechecking.typehint_marshal import typehint_marshal
 
 if TYPE_CHECKING:
     from magicnet.core.network_manager import NetworkManager
+    from magicnet.netobjects.network_object_manager import NetworkObjectManager
 
-ParameterDefinition = list[tuple[int, int, list]]
+ParameterDefinition = list[tuple[int, int, list[Any]]]
 
 
 class ObjectState(IntEnum):
@@ -36,11 +38,11 @@ class ObjectState(IntEnum):
 @dataclasses.dataclass
 class MarshalledSignature:
     object_role: int
-    signatures: list
+    signatures: list[network_types.hashable]
 
 
 @dataclasses.dataclass
-class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
+class NetworkObject(MessengerNode["NetworkObjectManager", "NetworkManager"], abc.ABC, metaclass=NetworkObjectMeta):
     """
     NetworkObject is used to write messages in an OOP style.
     Each NetworkObject has a view on one or more servers,
@@ -55,7 +57,7 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     owner: int = 0
     zone: int = 0
 
-    object_role: ClassVar[int] = None
+    object_role: ClassVar[int]
     """
     Each object exists in one or more roles.
     For example, a set of roles may look like (client = 0, server = 1, owner = 2)
@@ -68,18 +70,18 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     Different object types can have different role mappings.
     """
 
-    network_name: ClassVar[str] = None
+    network_name: ClassVar[str]
     """
     The network name of this class. All views of the same object type
     must have the same network name.
     """
 
-    loaded_params: dict[tuple[int, int], list] = dataclasses.field(default_factory=dict)
-    field_data: ClassVar[list[NetworkField]] = None
+    loaded_params: dict[tuple[int, int], list[Any]] = dataclasses.field(default_factory=dict)
+    field_data: ClassVar[list[NetworkField]]
     """Contains the list of all fields, is set automatically by the metaclass."""
-    foreign_field_data: ClassVar[dict[int, list[FieldSignature]]] = None
+    foreign_field_data: ClassVar[dict[int, list[FieldSignature]]]
     """Contains the list of all foreign fields, is set automatically."""
-    message_index: ClassVar[dict[str, tuple[int, int]]] = None
+    message_index: ClassVar[dict[str, tuple[int, int]]]
 
     object_state: ObjectState = ObjectState.INVALID
 
@@ -96,55 +98,45 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             return None
         return foreign_list[field]
 
-    def persist_field_data(self, role: int, field: int, params: list):
+    def persist_field_data(self, role: int, field: int, params: list[Any]):
         signature = self.get_field_signature(role, field)
         if not signature or not (signature.flags & SignatureFlags.PERSIST_IN_RAM):
             return
         self.loaded_params[(role, field)] = params
 
     def __post_init__(self):
-        self.parent = self.controller.object_manager
+        self.parent = self.controller.object_manager  # pyright: ignore[reportUnannotatedClassAttribute]
 
     @classmethod
     def set_type(cls, otype: int) -> None:
         cls.otype = otype
 
     @classmethod
-    def marshal_fields(cls) -> dict:
+    def marshal_fields(cls) -> dict[str, network_types.hashable]:
         return dataclasses.asdict(
             MarshalledSignature(
                 cls.object_role,
-                [
-                    typehint_marshal.signature_to_marshal(field)
-                    for field in cls.field_data
-                ],
+                [typehint_marshal.signature_to_marshal(field) for field in cls.field_data],
             )
         )
 
     @classmethod
-    def unmarshal_foreign_field(cls, data: dict) -> None:
-        signature = MarshalledSignature(**data)
+    def unmarshal_foreign_field(cls, data: dict[str, network_types.hashable]) -> None:
+        signature = MarshalledSignature(**data)  # pyright: ignore[reportArgumentType]
         if signature.object_role == cls.object_role:
             # we don't need to marshal our own fields
             # this is so that multiple roles each can load the full set of files
             return
         cls.foreign_field_data[signature.object_role] = [
-            typehint_marshal.marshal_to_signature(field)
-            for field in signature.signatures
+            typehint_marshal.marshal_to_signature(field) for field in signature.signatures
         ]
 
     @classmethod
     def add_foreign_class(cls, foreign: type["NetworkObject"]) -> None:  # noqa: UP006
-        cls.foreign_field_data[foreign.object_role] = foreign.field_data
+        cls.foreign_field_data[foreign.object_role] = list(foreign.field_data)
 
     @classmethod
     def finalize_fields(cls) -> None:
-        if cls.network_name is None:
-            raise errors.NoNetworkName(cls.__name__)
-
-        if cls.object_role is None:
-            raise errors.NoObjectRole(cls.__name__, cls.network_name)
-
         cls.message_index = {}
         all_fields: dict[int, list[str]] = defaultdict(list)
         for field in cls.field_data:
@@ -178,19 +170,14 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             self.call_field(handle, role_id, field_id, arguments)
 
     def get_loaded_params(self) -> ParameterDefinition:
-        return [
-            (role, field, params)
-            for (role, field), params in self.loaded_params.items()
-        ]
+        return [(role, field, params) for (role, field), params in self.loaded_params.items()]
 
     def resolve_callback_name(self, field_id: int) -> NetworkField | None:
         if field_id >= len(self.field_data):
             return None
         return self.field_data[field_id]
 
-    def call_field(
-        self, handle: ConnectionHandle, role_id: int, field_id: int, arguments: list
-    ):
+    def call_field(self, handle: ConnectionHandle, role_id: int, field_id: int, arguments: list[Any]):
         self.persist_field_data(role_id, field_id, arguments)
         if role_id != self.object_role:
             # calling a remote field, we only save the parameter
@@ -219,11 +206,9 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             return
 
-        arguments, e = field.validate_arguments(arguments)
-        if e:
-            self.emit(
-                StandardEvents.WARNING, f"Arguments for {field.name} do not match: {e}"
-            )
+        arguments1, e = field.validate_arguments(arguments)
+        if e or arguments1 is None:
+            self.emit(StandardEvents.WARNING, f"Arguments for {field.name} do not match: {e}")
             self.emit(
                 MNEvents.BAD_NETWORK_OBJECT_CALL,
                 dict(
@@ -236,9 +221,9 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
             )
             return
 
-        field.call(self, arguments)
+        field.call(self, arguments1)
 
-    def request_generate(self, *, zone: int = None, owner: int = 0) -> None:
+    def request_generate(self, *, zone: int | None = None, owner: int = 0) -> None:
         if zone is not None:
             self.zone = zone
         if self.manager.client_repository is not None:
@@ -264,17 +249,15 @@ class NetworkObject(MessengerNode, abc.ABC, metaclass=NetworkObjectMeta):
     def send_message(
         self,
         message: str,
-        args: list | tuple = (),
+        args: list[Any] | tuple[Any, ...] = (),
         *,
         receiver: ConnectionHandle | None = None,
     ) -> None:
-        args = unpack_dataclasses(args)
+        args1 = unpack_dataclasses(args)
         role_id, field_id = self.resolve_field(message)
-        self.persist_field_data(role_id, field_id, list(args))
+        self.persist_field_data(role_id, field_id, list(args1))
         if self.object_state == ObjectState.GENERATED:
-            self.manager.object_manager.request_call_field(
-                receiver, self, role_id, field_id, args
-            )
+            self.manager.object_manager.request_call_field(receiver, self, role_id, field_id, args1)
 
     @abc.abstractmethod
     def net_create(self) -> None:
@@ -322,7 +305,7 @@ class ForeignNetworkObject(NetworkObject):
         raise errors.ForeignObjectUsed(self.network_name)
 
     @classmethod
-    def unmarshal_foreign_field(cls, data: dict) -> None:
+    def unmarshal_foreign_field(cls, data: dict[str, network_types.hashable]) -> None:
         # We need not do this operation, as this facet will not
         # receive or send any messages anyway if configured properly
         pass

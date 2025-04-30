@@ -1,10 +1,11 @@
 __all__ = ["message_processors"]
 
-from magicnet.protocol.processor_base import MessageProcessor
+from typing import Final
+
 from magicnet.protocol.processors import data, handshake, network_objects
 from magicnet.protocol.protocol_globals import StandardMessageTypes
 
-message_processors: dict[StandardMessageTypes, type[MessageProcessor]] = {
+message_processors: Final = {
     StandardMessageTypes.MOTD: handshake.MsgMotd,
     StandardMessageTypes.HELLO: handshake.MsgHello,
     StandardMessageTypes.DISCONNECT: handshake.MsgDisconnect,

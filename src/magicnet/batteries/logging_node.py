@@ -5,12 +5,14 @@ import functools
 import logging
 import re
 import traceback
+from typing import Any, final
 
 from magicnet.util.messenger import MessengerNode, StandardEvents
 
 
 @dataclasses.dataclass
-class LoggerNode(MessengerNode):
+@final
+class LoggerNode(MessengerNode[Any, Any]):
     """
     LoggerNode can be attached to a messenger tree to automatically log
     INFO, WARNING, ERROR and EXCEPTION through builtin logging module.
@@ -32,9 +34,7 @@ class LoggerNode(MessengerNode):
 
     def __post_init__(self):
         self.listen(StandardEvents.ERROR, functools.partial(self.log, logging.ERROR))
-        self.listen(
-            StandardEvents.WARNING, functools.partial(self.log, logging.WARNING)
-        )
+        self.listen(StandardEvents.WARNING, functools.partial(self.log, logging.WARNING))
         self.listen(StandardEvents.INFO, functools.partial(self.log, logging.INFO))
         self.listen(StandardEvents.DEBUG, functools.partial(self.log, logging.DEBUG))
         self.listen(StandardEvents.EXCEPTION, self.log_exc)
@@ -48,16 +48,14 @@ class LoggerNode(MessengerNode):
             logger.setLevel(logging.INFO)
             logger.addHandler(console)
 
-    def log(self, level, data: str):
+    def log(self, level: int, data: str):
         if not self.listener.current_event:
             logger = logging.getLogger(self.prefix)
         else:
-            sender = self.__camel_case(
-                self.listener.current_event.sender.__class__.__name__
-            )
+            sender = self.__camel_case(self.listener.current_event.sender.__class__.__name__)
             logger = logging.getLogger(f"{self.prefix}.{sender}")
         logger.log(level, data)
 
-    def log_exc(self, name, exc):
+    def log_exc(self, name: str, exc: BaseException):
         self.log(logging.ERROR, f"Exception raised: {name}")
         traceback.print_exception(exc)

@@ -2,7 +2,7 @@ __all__ = ["typehint_marshal"]
 
 import dataclasses
 import inspect
-from typing import Annotated, Any, ForwardRef, Union, get_args, get_origin
+from typing import Annotated, Any, ForwardRef, Union, cast, get_args, get_origin
 
 from magicnet.core import errors
 from magicnet.protocol import network_types
@@ -153,20 +153,20 @@ class TypehintMarshal:
         return data
 
     def item_to_marshal(self, item: SignatureItem):
-        data = dataclasses.asdict(item)
+        data = cast(dict[str, network_types.hashable], dataclasses.asdict(item))
         if item.default_value is inspect.Parameter.empty:
             del data["default_value"]
         data["typehint"] = self.typehint_to_marshal(item.typehint)
         return data
 
-    def marshal_to_signature(self, marshal) -> FieldSignature:
+    def marshal_to_signature(self, marshal: network_types.hashable) -> FieldSignature:
         items = [self.marshal_to_item(x) for x in marshal["f"]]
         fs = FieldSignature()
         fs.set_name(marshal["n"])
         fs.set_from_list(items, marshal["a"])
         return fs
 
-    def signature_to_marshal(self, signature: FieldSignature):
+    def signature_to_marshal(self, signature: FieldSignature) -> network_types.hashable:
         return {
             "f": [self.item_to_marshal(x) for x in signature.signature],
             "n": signature.name,

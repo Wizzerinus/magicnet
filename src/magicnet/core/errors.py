@@ -8,6 +8,10 @@ __all__ = [
 ]
 
 
+from collections.abc import Callable
+from typing import Any, ForwardRef
+
+
 class DataValidationError(TypeError):
     """Failed to validate some data using the runtime type checker"""
 
@@ -29,44 +33,42 @@ class ApplicationRuntimeError(RuntimeError):
 
 
 class InvalidValidatorArguments(TypeError):
-    def __init__(self, hint):
+    def __init__(self, hint: type[Any]):
         super().__init__(f"{hint} is not a valid typehint")
 
 
 class WrongTupleLength(DataValidationError):
-    def __init__(self, length: int, value):
+    def __init__(self, length: int, value: Any):
         super().__init__(f"Expected a length {length} tuple, got {value}")
 
 
 class NoneRequired(DataValidationError):
-    def __init__(self, value):
+    def __init__(self, value: Any):
         super().__init__(f"Expected None, got {value}")
 
 
 class TupleOrListRequired(DataValidationError):
-    def __init__(self, value):
+    def __init__(self, value: Any):
         super().__init__(f"Expected a tuple or a list, got {value}")
 
 
 class UnionValidationFailed(DataValidationError):
-    def __init__(self, value, hint):
+    def __init__(self, value: Any, hint: type[Any]):
         super().__init__(f"Union validation error: expected {hint}, got {value}")
 
 
 class PredicateValidationFailed(DataValidationError):
-    def __init__(self, value, predicate: callable):
+    def __init__(self, value: Any, predicate: Callable[..., Any]):
         super().__init__(f"{value}: expected {predicate.__name__} to hold")
 
 
 class TypeComparisonFailed(DataValidationError):
-    def __init__(self, origin_type: type, value):
-        super().__init__(
-            f"{value}: expected {origin_type.__name__}, got {type(value).__name__}"
-        )
+    def __init__(self, origin_type: type, value: Any):
+        super().__init__(f"{value}: expected {origin_type.__name__}, got {type(value).__name__}")
 
 
 class RecursiveTypeProvided(DataValidationError):
-    def __init__(self, value):
+    def __init__(self, value: Any):
         super().__init__(f"{value}: recursion loop detected")
 
 
@@ -76,12 +78,12 @@ class NoValueProvided(DataValidationError):
 
 
 class TooManyArguments(DataValidationError):
-    def __init__(self, args: list, signature_count: int):
+    def __init__(self, args: list[Any], signature_count: int):
         super().__init__(f"Too many arguments: {args} (expected {signature_count})")
 
 
 class ExcessDataclassValue(DataValidationError):
-    def __init__(self, value):
+    def __init__(self, value: Any):
         super().__init__(f"Excess dataclass value: {value}")
 
 
@@ -160,35 +162,40 @@ class UnsupportedNetworkType(ApplicationConfigurationError):
 
 
 class UnsupportedForwardRef(UnsupportedNetworkType):
-    def __init__(self, forward_ref):
+    def __init__(self, forward_ref: ForwardRef):
         super().__init__(f"ForwardRef args are currently not supported: {forward_ref}")
 
 
 class UnsupportedTypehintName(UnsupportedNetworkType):
-    def __init__(self, typehint):
+    def __init__(self, typehint: type[Any]):
         super().__init__(f"The following type is currently not supported: {typehint}")
 
 
 class UnsupportedAnnotator(UnsupportedNetworkType):
-    def __init__(self, func):
+    def __init__(self, func: Callable[..., Any]):
         super().__init__(f"The following annotator is not supported: {func}")
 
 
 class UnsupportedMarshalledType(UnsupportedNetworkType):
-    def __init__(self, nettype):
+    def __init__(self, nettype: type[Any]):
         super().__init__(f"The following marshal type is not supported: {nettype}")
 
 
 class ForeignObjectUsed(ApplicationRuntimeError):
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(f"Attempt to use the foreign-only object {name}")
 
 
 class RepolessClientCreatesNetworkObject(ApplicationRuntimeError):
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(f"Attempt to create an object {name} without a repository")
 
 
 class UnknownObjectMessage(ApplicationRuntimeError):
-    def __init__(self, object_name, message):
+    def __init__(self, object_name: str, message: str):
         super().__init__(f"Attempt to call unknown field {object_name}.{message}")
+
+
+class SenderNotSet(ApplicationRuntimeError):
+    def __init__(self, msg: object):
+        super().__init__(f"Message {msg} has no sender!")

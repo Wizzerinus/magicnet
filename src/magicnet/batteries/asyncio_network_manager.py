@@ -3,7 +3,8 @@ __all__ = ["AsyncIONetworkManager"]
 import asyncio
 import dataclasses
 import signal
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Iterable
+from typing import Any
 
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.net_globals import MNEvents
@@ -20,11 +21,9 @@ class AsyncIONetworkManager(NetworkManager):
     with how MagicNet is constructed (being asynchronousness-agnostic).
     """
 
-    spawned_tasks: set[asyncio.Task] = dataclasses.field(
-        default_factory=set, repr=False
-    )
+    spawned_tasks: set[asyncio.Task[Any]] = dataclasses.field(default_factory=set, repr=False)
     add_signal_handlers: bool = dataclasses.field(default=True)
-    loop: asyncio.AbstractEventLoop = dataclasses.field(default=None, repr=False)
+    loop: asyncio.AbstractEventLoop = dataclasses.field(repr=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -49,7 +48,7 @@ class AsyncIONetworkManager(NetworkManager):
         self.loop.stop()
         self.emit(StandardEvents.INFO, "Termination done.")
 
-    def despawn_task(self, task: asyncio.Task):
+    def despawn_task(self, task: asyncio.Task[Any]):
         self.spawned_tasks.discard(task)
         try:
             exc = task.exception()
@@ -59,7 +58,7 @@ class AsyncIONetworkManager(NetworkManager):
         if exc:
             self.emit(StandardEvents.EXCEPTION, "Error in asynchronous code", exc)
 
-    def spawn_task(self, coro: Coroutine):
+    def spawn_task(self, coro: Coroutine[Any, Any, Any]):
         """
         Schedules an asynchronous task, prevents its garbage collection,
         and emits any exceptions created by the task.
@@ -71,7 +70,7 @@ class AsyncIONetworkManager(NetworkManager):
         self.spawned_tasks.add(task)
         task.add_done_callback(self.despawn_task)
 
-    def open_server(self, **kwargs):
+    def open_server(self, **kwargs: Iterable[Any]):
         """
         Starts one or more servers.
         Note that kwargs should map the foreign role to the parameters
@@ -86,7 +85,7 @@ class AsyncIONetworkManager(NetworkManager):
         self.loop.call_soon(lambda: super_open_server(**kwargs))
         self.loop.run_forever()
 
-    def open_connection(self, **kwargs):
+    def open_connection(self, **kwargs: Iterable[Any]):
         """
         Connects to one or more servers.
         Note that kwargs should map the foreign role to the parameters
@@ -107,6 +106,6 @@ class AsyncIONetworkManager(NetworkManager):
         This method is supposed to be used in an ``await`` statement.
         """
 
-        future = asyncio.Future()
+        future = asyncio.Future[ConnectionHandle]()
         self.listen(MNEvents.HANDLE_ACTIVATED, future.set_result)
         return future

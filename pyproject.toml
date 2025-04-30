@@ -1,9 +1,7 @@
 # Base stuff
 [project]
 name = "magicnet"
-authors = [
-    {name = "Wizzerinus", email = "quillinde@gmail.com"}
-]
+authors = [{ name = "Wizzerinus", email = "quillinde@gmail.com" }]
 description = "MagicNet is a modern and flexible networking library"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +17,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 keywords = ["networking", "astron"]
+dependencies = ["typing_extensions"]
 
 [project.urls]
 homepage = "https://github.com/wizzerinus/magicnet"
@@ -33,15 +32,40 @@ standard = ["msgpack~=1.0"]
 
 # Tools
 [tool.ruff]
-select = ["E", "F", "W", "I", "N", "UP", "YTT", "ASYNC", "S", "BLE", "FBT", "B",
-          "A001", "A002", "DTZ", "G", "PIE", "T20", "RET", "TID", "PTH",
-          "ERA", "PERF", "ISC", "TRY"]
-ignore = ["PERF203", "N818", "PTH123"]
-
-line-length = 90
+line-length = 120
 target-version = "py310"
 src = ["src"]
 extend-exclude = ["examples", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    "ASYNC",
+    "S",
+    "BLE",
+    "FBT",
+    "B",
+    "A001",
+    "A002",
+    "DTZ",
+    "G",
+    "PIE",
+    "T20",
+    "RET",
+    "TID",
+    "PTH",
+    "ERA",
+    "PERF",
+    "ISC",
+    "TRY",
+]
+ignore = ["PERF203", "N818", "PTH123", "S101"]
 
 [tool.ruff.lint.pyflakes]
 extend-generics = [
@@ -79,3 +103,17 @@ lint = ["check-black", "check-ruff"]
 dependencies = ["magicnet[standard]", "black", "ruff", "pytest"]
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11", "3.12"]
+
+[tool.pyright]
+reportUnusedCallResult = false
+reportExplicitAny = false
+reportAny = false
+reportIgnoreCommentWithoutRule = false
+reportImplicitOverride = false
+reportImportCycles = false
+pythonVersion = "3.10"
+exclude = ["venv", "examples"]
+ignore = [
+    "src/magicnet/util/typechecking",
+    "src/magicnet/protocol/network_types.py",
+]

@@ -24,7 +24,7 @@ class AnnotatedValidator(abc.ABC):
         pass
 
     def __eq__(self, other):
-        return type(other) == type(self) and other.arg == self.arg
+        return type(other) is type(self) and other.arg == self.arg
 
     def __hash__(self):
         return hash(self.__name__)
@@ -75,18 +75,9 @@ primitive = uint64 | int64 | str | bytes
 # Note: we have to use these classes due to PEP-585 being cringe
 # And also some more cringe to ensure the types are evaluated
 _fr_h = ForwardRef("hashable")
-hashable = (
-    uint64
-    | int64
-    | str
-    | bytes
-    | list[_fr_h]
-    | dict[primitive, _fr_h]
-    | tuple[_fr_h, ...]
-)
+hashable = uint64 | int64 | str | bytes | list[_fr_h] | dict[primitive, _fr_h] | tuple[_fr_h, ...]
 
 if sys.version_info >= (3, 12, 4):
     _fr_h._evaluate(globals(), locals(), frozenset(), recursive_guard=frozenset())  # noqa
 else:
     _fr_h._evaluate(globals(), locals(), frozenset())  # noqa
-

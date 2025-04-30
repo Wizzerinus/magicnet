@@ -2,6 +2,7 @@ __all__ = ["ProtocolEncoder"]
 
 import abc
 from collections.abc import Iterable
+from typing import Any
 
 from magicnet.core import errors
 from magicnet.core.net_message import NetMessage
@@ -14,7 +15,7 @@ class ProtocolEncoder(abc.ABC):
     one of the encoders in ``magicnet.batteries`` should be used.
     """
 
-    KNOWN_SYMMETRIC = False
+    KNOWN_SYMMETRIC: bool = False
     """
     Opt-in setting that allows defining this protocol as symmetric.
     This is usually True, unless some weird cases where the server
@@ -22,7 +23,7 @@ class ProtocolEncoder(abc.ABC):
     """
 
     @abc.abstractmethod
-    def pack(self, messages: Iterable[NetMessage]) -> bytes:
+    def pack(self, messages: Iterable[NetMessage[Any]], /) -> bytes:
         """
         Packs a sequence of messages into a datagram,
         that can be sent through Transport.
@@ -36,7 +37,7 @@ class ProtocolEncoder(abc.ABC):
         """
 
     @abc.abstractmethod
-    def unpack(self, data: bytes) -> Iterable[NetMessage]:
+    def unpack(self, data: bytes, /) -> Iterable[NetMessage[Any]]:
         """
         Unpacks a datagram received from the server
         into a sequence of individual messages.

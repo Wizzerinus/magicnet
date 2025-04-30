@@ -2,7 +2,7 @@ __all__ = ["SingleAppTransport"]
 
 import dataclasses
 from typing import cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from magicnet.core.connection import ConnectionHandle
 from magicnet.core.network_manager import NetworkManager
@@ -18,7 +18,7 @@ class SingleAppTransport(TransportHandler):
     """
 
     remote_nodes: list["SingleAppTransport"] = dataclasses.field(default_factory=list)
-    handle_map: dict[uuid4, ConnectionHandle] = dataclasses.field(default_factory=dict)
+    handle_map: dict[UUID, ConnectionHandle] = dataclasses.field(default_factory=dict)
 
     def send(self, connection: ConnectionHandle, dg: bytes) -> None:
         for node in self.remote_nodes:
@@ -30,10 +30,9 @@ class SingleAppTransport(TransportHandler):
         self.emit(StandardEvents.ERROR, "The opposite transport isn't defined!")
         return
 
-    def connect(self, connection_data: NetworkManager) -> None:
-        transport = cast(
-            SingleAppTransport, connection_data.transport.transports[self.manager.role]
-        )
+    def connect(self, connection_data: NetworkManager | None = None, *more: object) -> None:
+        assert connection_data is not None
+        transport = cast(SingleAppTransport, connection_data.transport.transports[self.manager.role])
         self.remote_nodes.append(transport)
         transport.remote_nodes.append(self)
         handle = ConnectionHandle(self, uuid4())
@@ -48,7 +47,7 @@ class SingleAppTransport(TransportHandler):
     def before_disconnect(self, handle: ConnectionHandle) -> None:
         self.handle_map.pop(handle.connection_data)
 
-    def open_server(self) -> None:
+    def open_server(self, *args: object) -> None:
         # Deliberately unneeded
         pass
 

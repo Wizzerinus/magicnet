@@ -2,22 +2,26 @@ __all__ = ["convert_object", "unpack_dataclasses"]
 
 import dataclasses
 import itertools
-from typing import Annotated, Any, TypeVar, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar, cast, get_args, get_origin, overload
 
 from magicnet.core import errors
 from magicnet.protocol import network_types
 from magicnet.util.typechecking.magicnet_typechecker import check_type
+
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
 
 T = TypeVar("T")
 
 Sentinel = object()
 
 
-def convert_fields(fields: tuple[dataclasses.Field, ...], data: tuple) -> list:
+def convert_fields(fields: tuple[dataclasses.Field[object], ...], data: tuple[object, ...]) -> list[type[Any]]:
     output = []
     for field, item in itertools.zip_longest(fields, data, fillvalue=Sentinel):
         if field is Sentinel:
             raise errors.ExcessDataclassValue(item)
+        field = cast(dataclasses.Field[object], field)
         if item is Sentinel:
             if field.default is not dataclasses.MISSING:
                 item = field.default
@@ -38,9 +42,9 @@ def convert_fields(fields: tuple[dataclasses.Field, ...], data: tuple) -> list:
     return output
 
 
-def convert_dataclass(typ: type[T], data: tuple) -> T:
-    data = convert_fields(dataclasses.fields(typ), data)
-    return typ(*data)
+def convert_dataclass(typ: type[T], data: tuple[object, ...]) -> T:
+    data_ = convert_fields(dataclasses.fields(typ), data)  # pyright: ignore[reportArgumentType]
+    return typ(*data_)
 
 
 def convert_object(hint: type[T], data: Any) -> T:
@@ -67,7 +71,23 @@ def convert_object(hint: type[T], data: Any) -> T:
     return data
 
 
-def unpack_dataclasses(data):
+@overload
+def unpack_dataclasses(data: list[Any]) -> list[Any]: ...
+
+
+@overload
+def unpack_dataclasses(data: tuple[Any, ...]) -> tuple[Any, ...]: ...
+
+
+@overload
+def unpack_dataclasses(data: dict[T, Any]) -> dict[T, Any]: ...
+
+
+@overload
+def unpack_dataclasses(data: "DataclassInstance") -> tuple[Any, ...]: ...
+
+
+def unpack_dataclasses(data: object):
     if isinstance(data, tuple) or isinstance(data, list):
         return tuple(unpack_dataclasses(item) for item in data)
     if isinstance(data, dict):

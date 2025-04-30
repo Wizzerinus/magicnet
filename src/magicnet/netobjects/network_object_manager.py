@@ -1,7 +1,7 @@
 __all__ = ["NetworkObjectManager"]
 
 import dataclasses
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from magicnet.core import errors
 from magicnet.core.connection import ConnectionHandle
@@ -15,11 +15,11 @@ if TYPE_CHECKING:
     from magicnet.core.network_manager import NetworkManager
 
 
-ParameterDefinition = list[tuple[int, int, list]]
+ParameterDefinition = list[tuple[int, int, list[Any]]]
 
 
 @dataclasses.dataclass
-class NetworkObjectManager(MessengerNode):
+class NetworkObjectManager(MessengerNode["NetworkManager", "NetworkManager"]):
     net_objects: dict[int, NetworkObject] = dataclasses.field(default_factory=dict)
     partial_objects: dict[int, NetworkObject] = dataclasses.field(default_factory=dict)
     """
@@ -49,11 +49,9 @@ class NetworkObjectManager(MessengerNode):
             StandardMessageTypes.GENERATE_OBJECT,
             (obj.oid, obj.otype, obj.owner, obj.zone),
         )
-        field_messages = []
+        field_messages: list[NetMessage[int, int, int, list[Any]]] = []
         for role, field, params in fields:
-            msg = NetMessage(
-                StandardMessageTypes.SET_OBJECT_FIELD, (obj.oid, role, field, params)
-            )
+            msg = NetMessage(StandardMessageTypes.SET_OBJECT_FIELD, (obj.oid, role, field, params))
             field_messages.append(msg)
         msg2 = NetMessage(StandardMessageTypes.OBJECT_GENERATE_DONE, (obj.oid,))
         for msg in [msg1, *field_messages, msg2]:
@@ -62,9 +60,7 @@ class NetworkObjectManager(MessengerNode):
             self.manager.send_message(msg)
 
     def get_visible_objects(self, handle: ConnectionHandle) -> list[NetworkObject]:
-        return self.listener.calculate(
-            MNMathTargets.VISIBLE_OBJECTS, list(self.net_objects.values()), handle
-        )
+        return self.listener.calculate(MNMathTargets.VISIBLE_OBJECTS, list(self.net_objects.values()), handle)
 
     def initialize_object(self, obj_id: int):
         if (obj := self.net_objects.get(obj_id)) is None:
@@ -72,9 +68,7 @@ class NetworkObjectManager(MessengerNode):
             return
 
         if obj.object_state != ObjectState.GENERATING:
-            self.emit(
-                StandardEvents.WARNING, f"The object {obj.oid} is already initialized!"
-            )
+            self.emit(StandardEvents.WARNING, f"The object {obj.oid} is already initialized!")
             return
 
         obj.net_create()
@@ -158,11 +152,9 @@ class NetworkObjectManager(MessengerNode):
         obj: NetworkObject,
         role: int,
         field: int,
-        params,
+        params: list[Any] | tuple[Any, ...],
     ):
-        msg = NetMessage(
-            StandardMessageTypes.SET_OBJECT_FIELD, (obj.oid, role, field, params)
-        )
+        msg = NetMessage(StandardMessageTypes.SET_OBJECT_FIELD, (obj.oid, role, field, params))
         if receiver is not None:
             msg.destination = receiver
         self.manager.send_message(msg)

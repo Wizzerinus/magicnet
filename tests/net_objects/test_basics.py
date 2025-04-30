@@ -26,7 +26,10 @@ def test_basics():
     srv_object = TestNetObject(tester.server)
     assert srv_object.object_state == ObjectState.INVALID
     srv_object.request_generate()
+    tester.server.transport.empty_queue()
     cl_object = tester.client.net_objects.get(srv_object.oid)
+    assert cl_object is not None
+    assert isinstance(cl_object, TestNetObject)
     assert cl_object.value == srv_object.value == 1
     assert cl_object.object_state == ObjectState.GENERATED
     srv_object.request_delete()
