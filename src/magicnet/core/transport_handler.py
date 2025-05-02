@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 
 Ts = TypeVarTuple("Ts")
 BytesOperator = Callable[[bytes, ConnectionHandle], bytes | None] | None
-MessageOperator = Callable[[NetMessage[Unpack[Ts]], ConnectionHandle], NetMessage[Unpack[Ts]] | None] | None
+AnyNetMessage = NetMessage[Unpack[tuple[Any, ...]]]
+MessageOperator = Callable[[AnyNetMessage, ConnectionHandle], AnyNetMessage | None] | None
 ManagerT = TypeVar("ManagerT", bound="NetworkManager", default="NetworkManager")
 
 
@@ -50,7 +51,7 @@ class TransportMiddleware(MessengerNode["TransportHandler[ManagerT]", ManagerT],
         if on_recv:
             self.add_math_target(MNMathTargets.BYTE_RECV, on_recv, priority=-self.priority)
 
-    def add_message_operator(self, on_send: MessageOperator[ManagerT], on_recv: MessageOperator[ManagerT]):
+    def add_message_operator(self, on_send: MessageOperator, on_recv: MessageOperator):
         if on_send:
             self.add_math_target(MNMathTargets.MSG_SEND, on_send, priority=self.priority)
         if on_recv:

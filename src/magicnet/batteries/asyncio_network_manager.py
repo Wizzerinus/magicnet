@@ -23,11 +23,10 @@ class AsyncIONetworkManager(NetworkManager):
 
     spawned_tasks: set[asyncio.Task[Any]] = dataclasses.field(default_factory=set, repr=False)
     add_signal_handlers: bool = dataclasses.field(default=True)
-    loop: asyncio.AbstractEventLoop = dataclasses.field(repr=False)
+    loop: asyncio.AbstractEventLoop = dataclasses.field(repr=False, default_factory=asyncio.new_event_loop)
 
     def __post_init__(self):
         super().__post_init__()
-        self.loop = asyncio.new_event_loop()
         if self.add_signal_handlers:
             signals = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
             for s in signals:
