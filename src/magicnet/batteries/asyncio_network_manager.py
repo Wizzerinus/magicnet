@@ -28,7 +28,9 @@ class AsyncIONetworkManager(NetworkManager):
     def __post_init__(self):
         super().__post_init__()
         if self.add_signal_handlers:
-            signals = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
+            signals = [signal.SIGINT, signal.SIGTERM]
+            if hasattr(signal, "SIGHUP"):
+                signals.append(signal.SIGHUP)
             for s in signals:
                 self.loop.add_signal_handler(s, self.shutdown)
 
